@@ -135,6 +135,45 @@
     border:3px solid var(--surface);box-shadow:var(--shadow);
   }
 
+  .mode-row{display:flex;flex-direction:column;gap:8px;}
+  .mode-label{font-size:.9rem;color:var(--muted);}
+  .mode-group{display:flex;gap:8px;flex-wrap:wrap;}
+  .mode-btn{
+    flex:1 1 auto;min-width:110px;
+    padding:10px 14px;border-radius:10px;
+    border:1px solid var(--line);background:var(--surface-2);color:var(--ink);
+    font-family:inherit;font-size:.88rem;font-weight:600;cursor:pointer;
+    transition:background .2s ease, border-color .2s ease, color .2s ease;
+  }
+  .mode-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .mode-btn[aria-pressed="true"]{
+    background:color-mix(in srgb, var(--accent) 22%, var(--surface));
+    border-color:var(--accent);color:var(--accent-strong);
+  }
+  .mode-hint{font-size:.78rem;color:var(--muted);}
+
+  .history{
+    border-top:1px solid var(--line);
+    padding-top:18px;
+  }
+  .history-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;}
+  .history-head b{font-size:.9rem;}
+  .history-head span{font-size:.78rem;color:var(--muted);}
+  .history-log{
+    list-style:none;margin:0;padding:0;
+    display:flex;flex-direction:column;gap:0;
+    max-height:220px;overflow-y:auto;
+  }
+  .history-log li{
+    display:grid;grid-template-columns:56px 22px 1fr;gap:10px;align-items:center;
+    padding-block:8px;border-top:1px solid var(--line);font-size:.85rem;
+  }
+  .history-log li:first-child{border-top:none;}
+  .history-log time{font-family:"IBM Plex Mono",monospace;color:var(--muted);font-variant-numeric:tabular-nums;}
+  .history-log .dot{font-size:1rem;text-align:center;}
+  .history-log .desc{color:var(--ink);}
+  .history-log .empty{color:var(--muted);font-style:italic;grid-column:1/-1;padding-block:4px;}
+
   /* SECTIONS */
   section{margin-top:64px;}
   .section-head{margin-bottom:22px;}
@@ -255,6 +294,26 @@
         <input type="range" id="threshSlider" min="5" max="80" value="35" aria-label="ค่าเกณฑ์ threshold เปอร์เซ็นต์">
       </div>
     </div>
+
+    <div class="mode-row">
+      <div class="mode-label">โหมดควบคุม — เหมือนปุ่ม S1/S2 บนบอร์ด หรือสวิตช์ในแอป NETPIE Freeboard</div>
+      <div class="mode-group" role="group" aria-label="โหมดควบคุมไฟ">
+        <button type="button" class="mode-btn" data-mode="auto" aria-pressed="true">🔁 อัตโนมัติ</button>
+        <button type="button" class="mode-btn" data-mode="on" aria-pressed="false">💡 บังคับเปิด</button>
+        <button type="button" class="mode-btn" data-mode="off" aria-pressed="false">🌑 บังคับปิด</button>
+      </div>
+      <div class="mode-hint" id="modeHint">โหมดอัตโนมัติ: ใช้ค่าจากเซนเซอร์แสงเทียบกับเกณฑ์ด้านบน</div>
+    </div>
+
+    <div class="history">
+      <div class="history-head">
+        <b>ประวัติการเปิด–ปิดย้อนหลัง</b>
+        <span>จำลองจากการโต้ตอบบนหน้านี้</span>
+      </div>
+      <ul class="history-log" id="historyLog">
+        <li class="empty">ยังไม่มีการเปลี่ยนสถานะ ลองเลื่อนแถบหรือกดปุ่มโหมดด้านบน</li>
+      </ul>
+    </div>
   </div>
 
   <section>
@@ -333,6 +392,39 @@
         <div class="body"><b>ปิดท้ายด้วย wait 0.5 วินาที</b><span>ในบล็อก Forever เพื่อไม่ให้เซนเซอร์อ่านค่าถี่เกินไป</span></div>
       </li>
     </ol>
+    <p style="color:var(--muted);font-size:.9rem;margin-top:14px;">เท่านี้บอร์ดก็ทำงานอัตโนมัติได้แล้วโดยไม่ต้องต่อเน็ต — ถ้าต้องการเปิด/ปิดเองจากปุ่มบนบอร์ดหรือจากมือถือ พร้อมดูประวัติย้อนหลัง ให้ทำต่อในหัวข้อถัดไป</p>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>เปิด–ปิดเอง และดูประวัติย้อนหลัง</h2>
+      <p>บอร์ด KidBright ใช้ชิป ESP32 ที่มี WiFi ในตัวอยู่แล้ว จึงเชื่อมกับแพลตฟอร์ม <strong>NETPIE</strong> (ฟรี ของ NECTEC หน่วยงานเดียวกับที่สร้าง KidBright) เพื่อบังคับเปิด–ปิดจากแอปและเก็บประวัติพร้อมเวลาได้ โดยไม่ต้องต่อสายเพิ่ม</p>
+    </div>
+
+    <div class="callout">
+      <div class="icon">🕹️</div>
+      <div>
+        <b>ควบคุมได้ 2 ทาง เท่ากัน</b>
+        <span>กดปุ่ม <span class="mono">S1</span> บนบอร์ด = บังคับเปิด, กดปุ่ม <span class="mono">S2</span> = บังคับปิด, กดค้างพร้อมกัน = กลับเป็นอัตโนมัติ — หรือสลับสวิตช์เดียวกันนี้จากแดชบอร์ด NETPIE Freeboard บนมือถือ/คอมพิวเตอร์เครื่องไหนก็ได้ สถานะจะซิงก์กันเสมอ</span>
+      </div>
+    </div>
+
+    <ol class="steps" style="margin-top:14px;">
+      <li><div class="idx">7</div><div class="body"><b>สมัครบัญชี NETPIE ฟรีที่ netpie.io</b><span>ทำเองในเบราว์เซอร์ (ต้องมีอีเมลของนักเรียน/ครูที่ปรึกษา)</span></div></li>
+      <li><div class="idx">8</div><div class="body"><b>สร้าง Device ใหม่แบบ Freeboard</b><span>คัดลอกค่า Device ID, Key, Secret ที่ระบบสร้างให้</span></div></li>
+      <li><div class="idx">9</div><div class="body"><b>ใน KidBright IDE เพิ่มบล็อก WiFi connect</b><span>ใส่ชื่อ/รหัส WiFi ของโรงเรียน จากหมวด Internet</span></div></li>
+      <li><div class="idx">10</div><div class="body"><b>เพิ่มบล็อก NETPIE connect</b><span>ใส่ Device ID / Key / Secret ที่คัดลอกไว้</span></div></li>
+      <li><div class="idx">11</div><div class="body"><b>เพิ่มตัวแปร mode (auto / on / off)</b><span>ปุ่ม S1/S2 และสวิตช์บน Freeboard แก้ตัวแปรนี้ร่วมกัน ส่วนบล็อก if เดิมเปลี่ยนเงื่อนไขเป็น "mode = auto และ Light level sensor &lt; 35" หรือ "mode = on"</span></div></li>
+      <li><div class="idx">12</div><div class="body"><b>เพิ่มบล็อก NETPIE publish</b><span>ส่งค่าความสว่างและสถานะไฟขึ้น Feed ทุกครั้งที่ค่าเปลี่ยน หรือทุก 1 นาที — NETPIE เก็บเป็นประวัติพร้อมเวลาให้อัตโนมัติ</span></div></li>
+      <li><div class="idx">13</div><div class="body"><b>ออกแบบหน้า Freeboard</b><span>ลากวิดเจ็ต Switch (เปิด–ปิด) และ Trend graph (กราฟย้อนหลัง) มาผูกกับ Feed ที่สร้างไว้</span></div></li>
+    </ol>
+
+    <div class="spec-grid" style="margin-top:14px;">
+      <div class="spec"><b>ควบคุมระยะไกล</b><span>NETPIE Freeboard · Switch widget</span></div>
+      <div class="spec"><b>ประวัติย้อนหลัง</b><span>NETPIE Feed · Trend graph พร้อมเวลา</span></div>
+      <div class="spec"><b>ควบคุมที่ตัวบอร์ด</b><span>ปุ่ม S1 (เปิด) / S2 (ปิด)</span></div>
+      <div class="spec"><b>การเชื่อมต่อ</b><span>WiFi ในตัว ESP32 · ไม่ต้องเพิ่มโมดูล</span></div>
+    </div>
   </section>
 
   <section>
@@ -391,17 +483,61 @@
   var lightVal = document.getElementById("lightVal");
   var threshVal = document.getElementById("threshVal");
   var pill = document.getElementById("statusPill");
+  var modeButtons = Array.prototype.slice.call(document.querySelectorAll(".mode-btn"));
+  var modeHint = document.getElementById("modeHint");
+  var historyLog = document.getElementById("historyLog");
 
-  function render(){
+  var mode = "auto";
+  var lastIsDark = null;
+  var MAX_LOG = 8;
+
+  var MODE_HINTS = {
+    auto: "โหมดอัตโนมัติ: ใช้ค่าจากเซนเซอร์แสงเทียบกับเกณฑ์ด้านบน",
+    on: "บังคับเปิด: ไฟติดค้างไม่ว่าค่าแสงจะเป็นเท่าไร (เหมือนกดปุ่ม S1 หรือสวิตช์ใน Freeboard)",
+    off: "บังคับปิด: ไฟดับค้างไม่ว่าค่าแสงจะเป็นเท่าไร (เหมือนกดปุ่ม S2 หรือสวิตช์ใน Freeboard)"
+  };
+
+  function timeNow(){
+    return new Date().toLocaleTimeString("th-TH", {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+  }
+
+  function logEvent(isDark, reason){
+    var empty = historyLog.querySelector(".empty");
+    if(empty) empty.remove();
+
+    var li = document.createElement("li");
+    var time = document.createElement("time");
+    time.textContent = timeNow();
+    var dot = document.createElement("span");
+    dot.className = "dot";
+    dot.textContent = isDark ? "💡" : "⚫";
+    var desc = document.createElement("span");
+    desc.className = "desc";
+    desc.textContent = (isDark ? "ไฟติด" : "ไฟดับ") + " — " + reason;
+
+    li.appendChild(time);
+    li.appendChild(dot);
+    li.appendChild(desc);
+    historyLog.insertBefore(li, historyLog.firstChild);
+
+    while(historyLog.children.length > MAX_LOG){
+      historyLog.removeChild(historyLog.lastChild);
+    }
+  }
+
+  function render(logReason){
     var light = Number(lightSlider.value);
     var thresh = Number(threshSlider.value);
     lightVal.textContent = light;
     threshVal.textContent = thresh;
-    var isDark = light < thresh;
+
+    var isDark;
+    if(mode === "on") isDark = true;
+    else if(mode === "off") isDark = false;
+    else isDark = light < thresh;
 
     leds.forEach(function(led){
       led.setAttribute("fill", isDark ? "var(--led-on)" : "var(--led-off)");
-      led.style.opacity = isDark ? "1" : "1";
     });
 
     if(isDark){
@@ -411,10 +547,25 @@
       pill.classList.remove("on");
       pill.textContent = "☀️ กลางวัน — ไฟดับ";
     }
+
+    if(lastIsDark !== null && isDark !== lastIsDark){
+      logEvent(isDark, logReason || (mode === "auto" ? "แสงเทียบกับเกณฑ์เปลี่ยน" : "เปลี่ยนโหมดควบคุม"));
+    }
+    lastIsDark = isDark;
   }
 
-  lightSlider.addEventListener("input", render);
-  threshSlider.addEventListener("input", render);
+  lightSlider.addEventListener("input", function(){ render(); });
+  threshSlider.addEventListener("input", function(){ render(); });
+
+  modeButtons.forEach(function(btn){
+    btn.addEventListener("click", function(){
+      mode = btn.dataset.mode;
+      modeButtons.forEach(function(b){ b.setAttribute("aria-pressed", b === btn ? "true" : "false"); });
+      modeHint.textContent = MODE_HINTS[mode];
+      render(mode === "auto" ? "กลับเป็นโหมดอัตโนมัติ" : (mode === "on" ? "กดบังคับเปิด" : "กดบังคับปิด"));
+    });
+  });
+
   render();
 
   document.getElementById("year").textContent = new Date().getFullYear() + 543;
