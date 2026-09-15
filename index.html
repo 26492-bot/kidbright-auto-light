@@ -1,0 +1,422 @@
+<title>ไฟอัตโนมัติ KidBright</title>
+<style>
+  :root{
+    --bg:#F6F3EC;
+    --surface:#FFFFFF;
+    --surface-2:#EFEAE0;
+    --ink:#1E2A3A;
+    --muted:#5B6472;
+    --line:#E2DCD0;
+    --accent:#C9862B;
+    --accent-strong:#A85D14;
+    --led-off:#D8D2C4;
+    --led-on:#FFC24B;
+    --code-bg:#1E2A3A;
+    --code-ink:#EDEEF2;
+    --shadow: 0 1px 2px rgba(30,42,58,.06), 0 8px 24px rgba(30,42,58,.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0D1420;
+      --surface:#161F2E;
+      --surface-2:#1D2839;
+      --ink:#EDEEF2;
+      --muted:#93A0B4;
+      --line:#28334A;
+      --accent:#FFC24B;
+      --accent-strong:#FFD97A;
+      --led-off:#26314A;
+      --led-on:#FFC24B;
+      --code-bg:#0A0F18;
+      --code-ink:#DDE3EE;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 32px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0D1420;
+    --surface:#161F2E;
+    --surface-2:#1D2839;
+    --ink:#EDEEF2;
+    --muted:#93A0B4;
+    --line:#28334A;
+    --accent:#FFC24B;
+    --accent-strong:#FFD97A;
+    --led-off:#26314A;
+    --led-on:#FFC24B;
+    --code-bg:#0A0F18;
+    --code-ink:#DDE3EE;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 32px rgba(0,0,0,.35);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    margin:0;
+    padding-inline:20px;
+    font-family:"IBM Plex Sans Thai","Sarabun",system-ui,sans-serif;
+    line-height:1.65;
+  }
+  h1,h2,h3{
+    font-family:"Taviraj","Sarabun",serif;
+    font-weight:600;
+    text-wrap:balance;
+    margin:0;
+  }
+  .mono{font-family:"IBM Plex Mono",ui-monospace,monospace;}
+  a{color:var(--accent-strong);}
+
+  .wrap{max-width:760px;margin:0 auto;padding-block:56px 80px;}
+
+  /* HERO */
+  .eyebrow{
+    font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--accent-strong);font-weight:600;margin-bottom:10px;
+  }
+  h1{font-size:clamp(2rem,5vw,2.9rem);}
+  .tagline{color:var(--muted);font-size:1.05rem;max-width:52ch;margin-top:14px;}
+
+  .board{
+    margin-top:36px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:18px;
+    box-shadow:var(--shadow);
+    padding:28px;
+    display:flex;
+    flex-direction:column;
+    gap:22px;
+  }
+  .status-row{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  }
+  .pill{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:8px 16px;border-radius:999px;
+    background:var(--surface-2);
+    font-weight:600;font-size:.95rem;
+    border:1px solid var(--line);
+    transition:background .25s ease, color .25s ease, border-color .25s ease;
+  }
+  .pill.on{
+    background:color-mix(in srgb, var(--led-on) 22%, var(--surface));
+    border-color:var(--led-on);
+    color:var(--accent-strong);
+  }
+  .threshold-note{font-size:.85rem;color:var(--muted);}
+
+  .matrix-shell{
+    background:var(--code-bg);
+    border-radius:14px;
+    padding:18px;
+    display:flex;
+    justify-content:center;
+  }
+  #matrix{display:block;}
+  .led{transition:fill .25s ease, opacity .25s ease;}
+
+  .controls{display:flex;flex-direction:column;gap:16px;}
+  .control{display:flex;flex-direction:column;gap:6px;}
+  .control-label{
+    display:flex;justify-content:space-between;font-size:.9rem;color:var(--muted);
+  }
+  .control-label b{color:var(--ink);font-variant-numeric:tabular-nums;}
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;width:100%;height:6px;
+    border-radius:999px;background:var(--surface-2);outline:none;
+    border:1px solid var(--line);
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;
+    background:var(--accent);cursor:pointer;border:3px solid var(--surface);box-shadow:var(--shadow);
+  }
+  input[type=range]::-moz-range-thumb{
+    width:20px;height:20px;border-radius:50%;background:var(--accent);cursor:pointer;
+    border:3px solid var(--surface);box-shadow:var(--shadow);
+  }
+
+  /* SECTIONS */
+  section{margin-top:64px;}
+  .section-head{margin-bottom:22px;}
+  .section-head h2{font-size:1.55rem;}
+  .section-head p{color:var(--muted);margin-top:8px;max-width:56ch;}
+
+  .flow{
+    display:flex;gap:14px;flex-wrap:wrap;
+  }
+  .flow-step{
+    flex:1 1 180px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:18px;
+    box-shadow:var(--shadow);
+  }
+  .flow-step .num{
+    font-family:"IBM Plex Mono",monospace;font-size:.8rem;color:var(--accent-strong);
+    font-weight:700;letter-spacing:.06em;
+  }
+  .flow-step h3{font-size:1.05rem;margin-top:8px;font-family:"IBM Plex Sans Thai",sans-serif;font-weight:700;}
+  .flow-step p{margin:6px 0 0;color:var(--muted);font-size:.92rem;}
+  .flow-arrow{
+    display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:1.4rem;
+    padding:0 2px;
+  }
+
+  .steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:0;}
+  .steps li{
+    display:grid;grid-template-columns:36px 1fr;gap:14px;
+    padding-block:16px;border-top:1px solid var(--line);
+  }
+  .steps li:first-child{border-top:none;}
+  .steps .idx{
+    width:36px;height:36px;border-radius:50%;background:var(--surface-2);
+    display:flex;align-items:center;justify-content:center;font-weight:700;
+    font-family:"IBM Plex Mono",monospace;color:var(--accent-strong);border:1px solid var(--line);
+  }
+  .steps .body b{display:block;margin-bottom:2px;}
+  .steps .body span{color:var(--muted);font-size:.92rem;}
+
+  .callout{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-left:4px solid var(--accent);
+    border-radius:10px;
+    padding:18px 20px;
+    display:flex;
+    gap:14px;
+    box-shadow:var(--shadow);
+  }
+  .callout .icon{font-size:1.4rem;line-height:1;}
+  .callout b{display:block;margin-bottom:4px;}
+  .callout span{color:var(--muted);font-size:.93rem;}
+
+  .spec-grid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;
+  }
+  .spec{
+    background:var(--surface);border:1px solid var(--line);border-radius:12px;
+    padding:14px 16px;box-shadow:var(--shadow);
+  }
+  .spec b{display:block;font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px;}
+  .spec span{font-family:"IBM Plex Mono",monospace;font-size:.95rem;}
+
+  pre{
+    background:var(--code-bg);color:var(--code-ink);
+    border-radius:12px;padding:18px 20px;overflow-x:auto;
+    font-family:"IBM Plex Mono",monospace;font-size:.86rem;line-height:1.7;
+    box-shadow:var(--shadow);
+  }
+
+  footer{
+    margin-top:72px;padding-top:24px;border-top:1px solid var(--line);
+    color:var(--muted);font-size:.85rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;
+  }
+
+  @media (max-width:520px){
+    .status-row{flex-direction:column;align-items:flex-start;}
+    .flow{flex-direction:column;}
+    .flow-arrow{transform:rotate(90deg);padding:2px 0;}
+  }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Taviraj:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<div class="wrap">
+
+  <div class="eyebrow">โครงงานวิทยาศาสตร์ · ระบบไฟอัตโนมัติในโรงเรียน</div>
+  <h1>ไฟติดเองเมื่อฟ้ามืด<br>ดับเองเมื่อฟ้าสว่าง</h1>
+  <p class="tagline">ใช้บอร์ด <strong>KidBright v1.3</strong> เพียงตัวเดียว ไม่ต่อสายเพิ่มแม้แต่เส้นเดียว —
+    อ่านค่าความสว่างจากเซนเซอร์แสง (LDR) ที่ติดมากับบอร์ด แล้วสั่งจอ LED 16×8 บนบอร์ดทำหน้าที่แทน “หลอดไฟ”</p>
+
+  <div class="board" id="demo">
+    <div class="status-row">
+      <div class="pill" id="statusPill">☀️ กลางวัน — ไฟดับ</div>
+      <div class="threshold-note">ทดลองเลื่อนแถบด้านล่าง เพื่อจำลองค่าที่เซนเซอร์ LDR อ่านได้จริง</div>
+    </div>
+
+    <div class="matrix-shell">
+      <svg id="matrix" viewBox="0 0 168 88" width="336" height="176" aria-label="จำลองจอ LED 16 คูณ 8 บนบอร์ด KidBright"></svg>
+    </div>
+
+    <div class="controls">
+      <div class="control">
+        <div class="control-label">
+          <span>ระดับแสงที่วัดได้ (Light level sensor)</span>
+          <b><span id="lightVal">28</span>%</b>
+        </div>
+        <input type="range" id="lightSlider" min="0" max="100" value="28" aria-label="ระดับแสง เปอร์เซ็นต์">
+      </div>
+      <div class="control">
+        <div class="control-label">
+          <span>เกณฑ์ตัดสิน (threshold) — ต่ำกว่านี้ถือว่ามืด</span>
+          <b><span id="threshVal">35</span>%</b>
+        </div>
+        <input type="range" id="threshSlider" min="5" max="80" value="35" aria-label="ค่าเกณฑ์ threshold เปอร์เซ็นต์">
+      </div>
+    </div>
+  </div>
+
+  <section>
+    <div class="section-head">
+      <h2>หลักการทำงาน</h2>
+      <p>ลอจิกทั้งหมดวนซ้ำตลอดเวลาในบล็อก <span class="mono">Forever</span> ของ KidBright IDE สามขั้นตอนนี้เกิดขึ้นซ้ำทุกครึ่งวินาที</p>
+    </div>
+    <div class="flow">
+      <div class="flow-step">
+        <div class="num">01</div>
+        <h3>วัดแสง</h3>
+        <p>อ่านค่าจาก LDR ขา GPIO36 บนบอร์ด ได้ค่า 0–100 (0 = มืดสนิท, 100 = สว่างที่สุด)</p>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="num">02</div>
+        <h3>เปรียบเทียบ</h3>
+        <p>ถ้าค่าที่อ่านได้ <span class="mono">น้อยกว่า</span> เกณฑ์ที่ตั้งไว้ แปลว่าฟ้ามืดแล้ว</p>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="num">03</div>
+        <h3>สั่งไฟ</h3>
+        <p>มืด → จุดจอ LED ทั้งหมด (แทนหลอดไฟ) · สว่าง → ดับจอ LED</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>อุปกรณ์และการต่อวงจร</h2>
+    </div>
+    <div class="callout">
+      <div class="icon">🔌</div>
+      <div>
+        <b>ไม่ต้องต่อสายเพิ่มเลย</b>
+        <span>ใช้เฉพาะเซนเซอร์แสงและจอ LED ที่ติดตั้งมากับบอร์ด KidBright v1.3 อยู่แล้ว เสียบสาย USB เข้าคอมพิวเตอร์เพียงเส้นเดียวก็พร้อมใช้งาน</span>
+      </div>
+    </div>
+    <div class="spec-grid" style="margin-top:14px;">
+      <div class="spec"><b>เซนเซอร์แสง</b><span>LDR (analog) · GPIO 36</span></div>
+      <div class="spec"><b>ตัวแสดงผล "หลอดไฟ"</b><span>LED Matrix 8×8 ×2 = 16×8</span></div>
+      <div class="spec"><b>บอร์ด</b><span>KidBright v1.3 (ESP32)</span></div>
+      <div class="spec"><b>พอร์ตที่ตรวจพบ</b><span>COM4 (USB Serial)</span></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>เขียนบล็อกใน KidBright IDE</h2>
+      <p>เปิดโปรแกรม KidBright IDE แล้วลากบล็อกต่อกันตามลำดับนี้ในแท็บ Block</p>
+    </div>
+    <ol class="steps">
+      <li>
+        <div class="idx">1</div>
+        <div class="body"><b>เริ่มด้วยบล็อก Forever</b><span>จากหมวด Control — ทุกอย่างข้างในจะทำงานซ้ำตลอดเวลา</span></div>
+      </li>
+      <li>
+        <div class="idx">2</div>
+        <div class="body"><b>ใส่บล็อก if…else</b><span>จากหมวด Logic วางไว้ในบล็อก Forever</span></div>
+      </li>
+      <li>
+        <div class="idx">3</div>
+        <div class="body"><b>เงื่อนไข: Light level sensor &lt; 35</b><span>ลากบล็อก "Light level sensor" จากหมวด Sensor มาเทียบกับตัวเลข (ปรับค่า 35 ได้ตามความไวที่ต้องการ)</span></div>
+      </li>
+      <li>
+        <div class="idx">4</div>
+        <div class="body"><b>ฝั่ง "จริง": LED Matrix แสดงผล fill (จุดสว่างทั้งหมด)</b><span>จากหมวด Display — เปรียบเสมือนเปิดไฟ</span></div>
+      </li>
+      <li>
+        <div class="idx">5</div>
+        <div class="body"><b>ฝั่ง "เท็จ": LED Matrix clear (ดับทั้งหมด)</b><span>เปรียบเสมือนปิดไฟ</span></div>
+      </li>
+      <li>
+        <div class="idx">6</div>
+        <div class="body"><b>ปิดท้ายด้วย wait 0.5 วินาที</b><span>ในบล็อก Forever เพื่อไม่ให้เซนเซอร์อ่านค่าถี่เกินไป</span></div>
+      </li>
+    </ol>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>อัปโหลดลงบอร์ด</h2>
+      <p>บอร์ดต่อผ่าน USB อยู่ที่พอร์ต <span class="mono">COM4</span> ในเครื่องนี้แล้ว</p>
+    </div>
+    <ol class="steps">
+      <li><div class="idx">1</div><div class="body"><b>เปิด KidBright IDE</b><span>ดาวน์โหลดได้ฟรีจาก kid-bright.org หากยังไม่มีในเครื่อง</span></div></li>
+      <li><div class="idx">2</div><div class="body"><b>เลือกรุ่นบอร์ดเป็น KidBright v1.3</b><span>ในเมนูตั้งค่าบอร์ดมุมขวาบนของโปรแกรม</span></div></li>
+      <li><div class="idx">3</div><div class="body"><b>เลือกพอร์ต COM4</b><span>ระบบตรวจพบบอร์ดที่พอร์ตนี้อัตโนมัติ</span></div></li>
+      <li><div class="idx">4</div><div class="body"><b>กดปุ่ม Upload</b><span>รอจนแถบสถานะแจ้งว่าอัปโหลดสำเร็จ ไฟจะเริ่มทำงานทันทีโดยไม่ต้องต่อคอมพิวเตอร์อีก</span></div></li>
+    </ol>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>ปรับความไวของเซนเซอร์</h2>
+      <p>ถ้าไฟติดเร็ว/ช้าเกินไปในสภาพแสงจริงของโรงเรียน ปรับได้ที่ตัวเลขเกณฑ์ในบล็อก if เพียงจุดเดียว</p>
+    </div>
+    <pre class="mono">ถ้า Light level sensor &lt; <span style="color:var(--led-on)">35</span>   →  เพิ่มตัวเลข = ไฟติดง่ายขึ้น (ไวต่อแสงน้อย)
+                              →  ลดตัวเลข   = ไฟติดยากขึ้น (ต้องมืดกว่าเดิม)</pre>
+  </section>
+
+  <footer>
+    <span>โครงงานไฟอัตโนมัติด้วย KidBright v1.3</span>
+    <span id="year"></span>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var COLS = 16, ROWS = 8, CELL = 9, GAP = 1.5;
+  var svg = document.getElementById("matrix");
+  var leds = [];
+
+  for(var r=0;r<ROWS;r++){
+    for(var c=0;c<COLS;c++){
+      var rect = document.createElementNS("http://www.w3.org/2000/svg","rect");
+      rect.setAttribute("x", c*(CELL+GAP)+2);
+      rect.setAttribute("y", r*(CELL+GAP)+2);
+      rect.setAttribute("width", CELL);
+      rect.setAttribute("height", CELL);
+      rect.setAttribute("rx", 1.6);
+      rect.setAttribute("class","led");
+      rect.setAttribute("fill","var(--led-off)");
+      svg.appendChild(rect);
+      leds.push(rect);
+    }
+  }
+  svg.setAttribute("viewBox","0 0 "+(COLS*(CELL+GAP)+4)+" "+(ROWS*(CELL+GAP)+4));
+
+  var lightSlider = document.getElementById("lightSlider");
+  var threshSlider = document.getElementById("threshSlider");
+  var lightVal = document.getElementById("lightVal");
+  var threshVal = document.getElementById("threshVal");
+  var pill = document.getElementById("statusPill");
+
+  function render(){
+    var light = Number(lightSlider.value);
+    var thresh = Number(threshSlider.value);
+    lightVal.textContent = light;
+    threshVal.textContent = thresh;
+    var isDark = light < thresh;
+
+    leds.forEach(function(led){
+      led.setAttribute("fill", isDark ? "var(--led-on)" : "var(--led-off)");
+      led.style.opacity = isDark ? "1" : "1";
+    });
+
+    if(isDark){
+      pill.classList.add("on");
+      pill.textContent = "🌙 กลางคืน — ไฟติด";
+    } else {
+      pill.classList.remove("on");
+      pill.textContent = "☀️ กลางวัน — ไฟดับ";
+    }
+  }
+
+  lightSlider.addEventListener("input", render);
+  threshSlider.addEventListener("input", render);
+  render();
+
+  document.getElementById("year").textContent = new Date().getFullYear() + 543;
+})();
+</script>
