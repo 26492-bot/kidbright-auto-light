@@ -103,7 +103,27 @@
     border-color:var(--led-on);
     color:var(--accent-strong);
   }
+  .pill.offline{
+    background:var(--surface-2);
+    border-color:var(--line);
+    color:var(--muted);
+  }
+  .live-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block;}
+  .pill.on .live-dot{background:#3FBF6A;box-shadow:0 0 0 3px color-mix(in srgb, #3FBF6A 25%, transparent);}
+  .pill.offline .live-dot{background:var(--muted);}
   .threshold-note{font-size:.85rem;color:var(--muted);}
+
+  .live-grid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;
+  }
+  .live-tile{
+    background:var(--surface-2);border:1px solid var(--line);border-radius:12px;
+    padding:14px 16px;
+  }
+  .live-tile b{display:block;font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px;}
+  .live-tile span{font-family:"IBM Plex Mono",monospace;font-size:1.2rem;font-variant-numeric:tabular-nums;}
+  .live-note{font-size:.8rem;color:var(--muted);}
+  .live-note code{font-family:"IBM Plex Mono",monospace;background:var(--surface-2);padding:1px 5px;border-radius:4px;}
 
   .matrix-shell{
     background:var(--code-bg);
@@ -313,6 +333,30 @@
       <ul class="history-log" id="historyLog">
         <li class="empty">ยังไม่มีการเปลี่ยนสถานะ ลองเลื่อนแถบหรือกดปุ่มโหมดด้านบน</li>
       </ul>
+    </div>
+    <p class="live-note" style="margin:0;">การ์ดด้านบนคือ <strong>ตัวจำลอง</strong> ไว้ทำความเข้าใจลอจิก — ควบคุมบอร์ดจริงได้ที่การ์ดถัดไป</p>
+  </div>
+
+  <div class="board" id="liveControl">
+    <div class="status-row">
+      <div class="pill offline" id="livePill"><span class="live-dot"></span> กำลังเชื่อมต่อบอร์ดจริง…</div>
+      <div class="threshold-note" id="liveUpdatedAt">ยังไม่เคยได้รับข้อมูลจากบอร์ด</div>
+    </div>
+
+    <div class="live-grid">
+      <div class="live-tile"><b>ระดับแสงจริง</b><span id="liveLight">—</span></div>
+      <div class="live-tile"><b>สถานะไฟจริง</b><span id="liveLamp">—</span></div>
+      <div class="live-tile"><b>โหมดปัจจุบัน</b><span id="liveMode">—</span></div>
+    </div>
+
+    <div class="mode-row">
+      <div class="mode-label">ควบคุมบอร์ดจริงจากที่นี่ — สั่งผ่านอินเทอร์เน็ต บอร์ดต้องเปิดเครื่องและต่อ WiFi <code class="mono">TNW-WIFI2</code> อยู่</div>
+      <div class="mode-group" role="group" aria-label="ควบคุมบอร์ดจริง">
+        <button type="button" class="mode-btn" data-live-mode="auto" aria-pressed="false">🔁 อัตโนมัติ</button>
+        <button type="button" class="mode-btn" data-live-mode="on" aria-pressed="false">💡 เปิด</button>
+        <button type="button" class="mode-btn" data-live-mode="off" aria-pressed="false">🌑 ปิด</button>
+      </div>
+      <div class="live-note">คำสั่งจะไปถึงบอร์ดภายใน ~20 วินาที (บอร์ด poll คำสั่งทุก 20 วิ เพื่อไม่ให้ชนขีดจำกัดของ ntfy.sh)</div>
     </div>
   </div>
 
@@ -569,5 +613,83 @@
   render();
 
   document.getElementById("year").textContent = new Date().getFullYear() + 543;
+
+  // --- ควบคุมบอร์ดจริง (kvdb.io relay) ---
+  var NTFY_CMD_TOPIC = "kidbright-cmd-Gs19S5zFML4da5fiUmsi8p";
+  var NTFY_STATUS_TOPIC = "kidbright-status-Gs19S5zFML4da5fiUmsi8p";
+  var NTFY_BASE = "https://ntfy.sh/";
+  var livePill = document.getElementById("livePill");
+  var liveUpdatedAt = document.getElementById("liveUpdatedAt");
+  var liveLight = document.getElementById("liveLight");
+  var liveLamp = document.getElementById("liveLamp");
+  var liveMode = document.getElementById("liveMode");
+  var liveButtons = Array.prototype.slice.call(document.querySelectorAll("[data-live-mode]"));
+  var lastStatusAt = 0;
+  var STALE_MS = 45000;
+
+  var MODE_TH = { auto: "อัตโนมัติ", on: "บังคับเปิด", off: "บังคับปิด" };
+
+  function renderLiveStatus(data) {
+    liveLight.textContent = (typeof data.light === "number") ? data.light + "%" : "—";
+    liveLamp.textContent = data.lamp ? "💡 ติด" : "⚫ ดับ";
+    liveMode.textContent = MODE_TH[data.mode] || data.mode || "—";
+  }
+
+  function updateConnectionUI() {
+    var ageMs = Date.now() - lastStatusAt;
+    if (lastStatusAt === 0) {
+      livePill.className = "pill offline";
+      livePill.innerHTML = '<span class="live-dot"></span> กำลังเชื่อมต่อบอร์ดจริง…';
+      liveUpdatedAt.textContent = "ยังไม่เคยได้รับข้อมูลจากบอร์ด";
+      return;
+    }
+    if (ageMs > STALE_MS) {
+      livePill.className = "pill offline";
+      livePill.innerHTML = '<span class="live-dot"></span> บอร์ดออฟไลน์';
+    } else {
+      livePill.className = "pill on";
+      livePill.innerHTML = '<span class="live-dot"></span> บอร์ดออนไลน์';
+    }
+    liveUpdatedAt.textContent = "อัปเดตล่าสุด " + Math.round(ageMs / 1000) + " วินาทีที่แล้ว";
+  }
+
+  function lastNdjsonMessage(text) {
+    var lines = text.trim().split("\n").filter(Boolean);
+    if (lines.length === 0) return null;
+    try {
+      var evt = JSON.parse(lines[lines.length - 1]);
+      return evt.message;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async function pollLiveStatus() {
+    try {
+      var res = await fetch(NTFY_BASE + NTFY_STATUS_TOPIC + "/json?poll=1&since=30s", { cache: "no-store" });
+      if (!res.ok) throw new Error("not ok");
+      var text = await res.text();
+      var msg = lastNdjsonMessage(text);
+      if (msg) {
+        var data = JSON.parse(msg);
+        lastStatusAt = Date.now();
+        renderLiveStatus(data);
+      }
+    } catch (e) {
+      // เงียบไว้ — updateConnectionUI() จะขึ้นออฟไลน์เองถ้าข้อมูลเก่าเกินไป
+    }
+    updateConnectionUI();
+  }
+
+  liveButtons.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      liveButtons.forEach(function (b) { b.setAttribute("aria-pressed", b === btn ? "true" : "false"); });
+      fetch(NTFY_BASE + NTFY_CMD_TOPIC, { method: "POST", body: btn.dataset.liveMode }).catch(function () {});
+    });
+  });
+
+  setInterval(updateConnectionUI, 1000);
+  setInterval(pollLiveStatus, 12000);
+  pollLiveStatus();
 })();
 </script>
