@@ -9,6 +9,7 @@
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <WiFiManager.h>
+#include <Preferences.h>
 
 // ลองต่อเน็ตที่รู้จักอยู่แล้วก่อน (เร็ว ไม่ต้องตั้งค่าอะไร)
 #define KNOWN_WIFI_SSID "TNW-WIFI2"
@@ -57,6 +58,10 @@ unsigned long lastPollAt = 0;
 unsigned long lastWifiAttempt = 0;
 uint8_t lastLight = 0;
 bool wasWifiConnected = false;
+
+Preferences prefs;
+unsigned long totalOnSeconds = 0;  // สะสมตลอดอายุบอร์ด เก็บถาวรใน flash (NVS)
+unsigned long lampOnSinceMs = 0;   // millis() ตอนไฟติดครั้งล่าสุด (0 = ตอนนี้ไฟดับ)
 
 const char *modeStr() {
   return mode == MODE_AUTO ? "auto" : (mode == MODE_ON ? "on" : "off");
@@ -168,9 +173,14 @@ void syncWithWeb() {
   }
   Serial.println();
 
+  // เว้นช่วงก่อนยิงคำขอที่สอง — ถ้ายิงติดกันทันทีจะไม่มีโควตาเหลือให้ POST
+  // เพราะ ntfy.sh เติมโควตาให้แค่ ~1 คำขอ/5 วินาที
+  delay(5500);
+
   String status = String("{\"light\":") + lastLight +
                   ",\"lamp\":" + (lampOn ? "true" : "false") +
-                  ",\"mode\":\"" + modeStr() + "\"}";
+                  ",\"mode\":\"" + modeStr() +
+                  "\",\"onSec\":" + currentTotalOnSeconds() + "}";
   Serial.print("sync: POST status code=");
   if (https.begin(client, NTFY_STATUS_URL)) {
     https.addHeader("Content-Type", "text/plain");
@@ -193,6 +203,13 @@ uint8_t readLight() {
 }
 
 void setLamp(bool on) {
+  if (on && !lampOn) {
+    lampOnSinceMs = millis();
+  } else if (!on && lampOn) {
+    totalOnSeconds += (millis() - lampOnSinceMs) / 1000;
+    prefs.putULong("onSec", totalOnSeconds);
+    lampOnSinceMs = 0;
+  }
   lampOn = on;
   if (on) {
     matrix.fillScreen(LED_ON);
@@ -200,6 +217,12 @@ void setLamp(bool on) {
     matrix.clear();
   }
   matrix.writeDisplay();
+}
+
+// ใช้ตอนรายงานสถานะ: รวมเวลาที่ติดค้างอยู่ตอนนี้เข้ากับยอดสะสมด้วย (ยังไม่ได้ persist จนกว่าจะปิด)
+unsigned long currentTotalOnSeconds() {
+  if (lampOn) return totalOnSeconds + (millis() - lampOnSinceMs) / 1000;
+  return totalOnSeconds;
 }
 
 void handleButtons() {
@@ -237,6 +260,11 @@ void handleButtons() {
 
 void setup() {
   Serial.begin(115200);
+  prefs.begin("kidbright", false);
+  totalOnSeconds = prefs.getULong("onSec", 0);
+  Serial.print("Loaded total on-time: ");
+  Serial.print(totalOnSeconds);
+  Serial.println("s");
   pinMode(LDR_PIN, INPUT);
   pinMode(S1_PIN, INPUT_PULLUP);
   pinMode(S2_PIN, INPUT_PULLUP);

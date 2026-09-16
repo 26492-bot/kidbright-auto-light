@@ -140,6 +140,28 @@
     background:color-mix(in srgb, var(--accent) 22%, var(--surface));
     border-color:var(--accent);color:var(--accent-strong);
   }
+
+  .energy-inputs{display:flex;gap:16px;flex-wrap:wrap;margin-top:2px;}
+  .energy-inputs label{display:flex;flex-direction:column;gap:4px;font-size:.82rem;color:var(--muted);}
+  .energy-inputs input{
+    font-family:"IBM Plex Mono",monospace;font-size:.95rem;color:var(--ink);
+    background:var(--surface-2);border:1px solid var(--line);border-radius:8px;
+    padding:8px 10px;width:120px;
+  }
+  .energy-inputs input:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+
+  .history{border-top:1px solid var(--line);padding-top:18px;}
+  .history-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;flex-wrap:wrap;gap:4px;}
+  .history-head b{font-size:.9rem;}
+  .history-head span{font-size:.78rem;color:var(--muted);}
+  .history-log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:0;max-height:220px;overflow-y:auto;}
+  .history-log li{display:grid;grid-template-columns:88px 22px 1fr;gap:10px;align-items:center;padding-block:8px;border-top:1px solid var(--line);font-size:.85rem;}
+  .history-log li:first-child{border-top:none;}
+  .history-log time{font-family:"IBM Plex Mono",monospace;color:var(--muted);font-variant-numeric:tabular-nums;font-size:.78rem;}
+  .history-log .dot{font-size:1rem;text-align:center;}
+  .history-log .desc{color:var(--ink);}
+  .history-log .empty{color:var(--muted);font-style:italic;grid-column:1/-1;padding-block:4px;}
+
   /* SECTIONS */
   section{margin-top:64px;}
   .section-head{margin-bottom:22px;}
@@ -254,6 +276,38 @@
         <button type="button" class="mode-btn" data-live-mode="off" aria-pressed="false">🌑 ปิด</button>
       </div>
       <div class="live-note">คำสั่งจะไปถึงบอร์ดภายใน ~12 วินาที</div>
+    </div>
+  </div>
+
+  <div class="board" id="energyCard">
+    <div class="status-row">
+      <div class="pill">🔌 ใช้ไฟสะสม</div>
+      <div class="threshold-note">คำนวณจากเวลาที่ไฟติดจริงบนบอร์ด (เก็บถาวรในบอร์ดแม้ปิดเครื่อง)</div>
+    </div>
+
+    <div class="live-grid">
+      <div class="live-tile"><b>เวลาไฟติดสะสม</b><span id="energyTime">—</span></div>
+      <div class="live-tile"><b>พลังงานที่ใช้ (ประมาณ)</b><span id="energyKwh">—</span></div>
+      <div class="live-tile"><b>คิดเป็นเงิน (ประมาณ)</b><span id="energyCost">—</span></div>
+    </div>
+
+    <div class="mode-row">
+      <div class="mode-label">ปรับให้ตรงกับหลอดไฟจริงที่จะติดตั้ง เพื่อประมาณค่าไฟให้แม่นขึ้น</div>
+      <div class="energy-inputs">
+        <label>กำลังไฟหลอด (วัตต์)<input type="number" id="wattInput" min="1" max="500" step="1"></label>
+        <label>ค่าไฟต่อหน่วย (บาท/kWh)<input type="number" id="rateInput" min="0" max="20" step="0.01"></label>
+      </div>
+      <div class="live-note">เป็นค่าประมาณจากเวลาไฟติดเท่านั้น ไม่ได้วัดกระแสไฟจริง ปรับตัวเลขได้ตามหลอดไฟและบิลค่าไฟจริง — บันทึกไว้ในเบราว์เซอร์นี้เท่านั้น</div>
+    </div>
+
+    <div class="history">
+      <div class="history-head">
+        <b>ประวัติการเปิด–ปิดที่สังเกตเห็น</b>
+        <span>บันทึกตอนเปิดหน้านี้ทิ้งไว้ · เก็บในเบราว์เซอร์นี้</span>
+      </div>
+      <ul class="history-log" id="historyLog">
+        <li class="empty">ยังไม่มีข้อมูล — เปิดหน้านี้ทิ้งไว้เพื่อบันทึกเวลาที่ไฟเปลี่ยนสถานะ</li>
+      </ul>
     </div>
   </div>
 
@@ -398,7 +452,117 @@ DARK_OFF_THRESHOLD = <span style="color:var(--led-on)">70</span>   → สว่
     liveLight.textContent = (typeof data.light === "number") ? data.light + "%" : "—";
     liveLamp.textContent = data.lamp ? "💡 ติด" : "⚫ ดับ";
     liveMode.textContent = MODE_TH[data.mode] || data.mode || "—";
+    updateEnergy(data.onSec);
+    trackHistory(data.lamp);
   }
+
+  // --- ใช้ไฟสะสม + ประวัติ ---
+  var wattInput = document.getElementById("wattInput");
+  var rateInput = document.getElementById("rateInput");
+  var energyTime = document.getElementById("energyTime");
+  var energyKwh = document.getElementById("energyKwh");
+  var energyCost = document.getElementById("energyCost");
+  var historyLog = document.getElementById("historyLog");
+  var MAX_HISTORY = 30;
+  var lastOnSec = null;
+  var lastLampObserved = null;
+
+  function loadNum(key, fallback) {
+    try {
+      var v = parseFloat(localStorage.getItem(key));
+      return isNaN(v) ? fallback : v;
+    } catch (e) { return fallback; }
+  }
+  function saveNum(key, val) {
+    try { localStorage.setItem(key, String(val)); } catch (e) {}
+  }
+
+  wattInput.value = loadNum("kb_watt", 9);
+  rateInput.value = loadNum("kb_rate", 4.18);
+
+  function formatDuration(totalSec) {
+    var h = Math.floor(totalSec / 3600);
+    var m = Math.floor((totalSec % 3600) / 60);
+    if (h === 0 && m === 0) return "< 1 นาที";
+    if (h === 0) return m + " นาที";
+    return h + " ชม. " + m + " นาที";
+  }
+
+  function updateEnergy(onSec) {
+    if (typeof onSec !== "number") return;
+    lastOnSec = onSec;
+    var watt = parseFloat(wattInput.value) || 0;
+    var rate = parseFloat(rateInput.value) || 0;
+    var kwh = (onSec / 3600) * (watt / 1000);
+    energyTime.textContent = formatDuration(onSec);
+    energyKwh.textContent = kwh.toFixed(3) + " kWh";
+    energyCost.textContent = "~" + (kwh * rate).toFixed(2) + " บาท";
+  }
+
+  wattInput.addEventListener("input", function () {
+    saveNum("kb_watt", wattInput.value);
+    if (lastOnSec !== null) updateEnergy(lastOnSec);
+  });
+  rateInput.addEventListener("input", function () {
+    saveNum("kb_rate", rateInput.value);
+    if (lastOnSec !== null) updateEnergy(lastOnSec);
+  });
+
+  function loadHistory() {
+    try {
+      var raw = localStorage.getItem("kb_history");
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) { return []; }
+  }
+  function saveHistory(list) {
+    try { localStorage.setItem("kb_history", JSON.stringify(list)); } catch (e) {}
+  }
+
+  var historyList = loadHistory();
+
+  function renderHistory() {
+    historyLog.innerHTML = "";
+    if (historyList.length === 0) {
+      var li = document.createElement("li");
+      li.className = "empty";
+      li.textContent = "ยังไม่มีข้อมูล — เปิดหน้านี้ทิ้งไว้เพื่อบันทึกเวลาที่ไฟเปลี่ยนสถานะ";
+      historyLog.appendChild(li);
+      return;
+    }
+    historyList.slice(0, MAX_HISTORY).forEach(function (item) {
+      var li = document.createElement("li");
+      var time = document.createElement("time");
+      var d = new Date(item.ts);
+      time.textContent = d.toLocaleString("th-TH", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+      var dot = document.createElement("span");
+      dot.className = "dot";
+      dot.textContent = item.lamp ? "💡" : "⚫";
+      var desc = document.createElement("span");
+      desc.className = "desc";
+      desc.textContent = item.lamp ? "ไฟติด" : "ไฟดับ";
+      li.appendChild(time);
+      li.appendChild(dot);
+      li.appendChild(desc);
+      historyLog.appendChild(li);
+    });
+  }
+
+  function trackHistory(lamp) {
+    if (typeof lamp !== "boolean") return;
+    if (lastLampObserved === null) {
+      lastLampObserved = lamp;
+      return;
+    }
+    if (lamp !== lastLampObserved) {
+      lastLampObserved = lamp;
+      historyList.unshift({ ts: Date.now(), lamp: lamp });
+      historyList = historyList.slice(0, MAX_HISTORY);
+      saveHistory(historyList);
+      renderHistory();
+    }
+  }
+
+  renderHistory();
 
   function updateConnectionUI() {
     var ageMs = Date.now() - lastStatusAt;
