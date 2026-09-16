@@ -356,7 +356,7 @@
         <button type="button" class="mode-btn" data-live-mode="on" aria-pressed="false">💡 เปิด</button>
         <button type="button" class="mode-btn" data-live-mode="off" aria-pressed="false">🌑 ปิด</button>
       </div>
-      <div class="live-note">คำสั่งจะไปถึงบอร์ดภายใน ~20 วินาที (บอร์ด poll คำสั่งทุก 20 วิ เพื่อไม่ให้ชนขีดจำกัดของ ntfy.sh)</div>
+      <div class="live-note">คำสั่งจะไปถึงบอร์ดภายใน ~30 วินาที (บอร์ด poll คำสั่งทุก 30 วิ เพื่อไม่ให้ชนขีดจำกัดของ ntfy.sh)</div>
     </div>
   </div>
 
@@ -625,7 +625,7 @@
   var liveMode = document.getElementById("liveMode");
   var liveButtons = Array.prototype.slice.call(document.querySelectorAll("[data-live-mode]"));
   var lastStatusAt = 0;
-  var STALE_MS = 45000;
+  var STALE_MS = 90000;
 
   var MODE_TH = { auto: "อัตโนมัติ", on: "บังคับเปิด", off: "บังคับปิด" };
 
@@ -666,7 +666,7 @@
 
   async function pollLiveStatus() {
     try {
-      var res = await fetch(NTFY_BASE + NTFY_STATUS_TOPIC + "/json?poll=1&since=30s", { cache: "no-store" });
+      var res = await fetch(NTFY_BASE + NTFY_STATUS_TOPIC + "/json?poll=1&since=60s", { cache: "no-store" });
       if (!res.ok) throw new Error("not ok");
       var text = await res.text();
       var msg = lastNdjsonMessage(text);
@@ -689,7 +689,7 @@
   });
 
   setInterval(updateConnectionUI, 1000);
-  setInterval(pollLiveStatus, 12000);
+  setInterval(pollLiveStatus, 25000);
   pollLiveStatus();
 })();
 </script>
