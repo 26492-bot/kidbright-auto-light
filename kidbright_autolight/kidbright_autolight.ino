@@ -24,8 +24,9 @@
 #define NTFY_CMD_POLL_URL "https://ntfy.sh/kidbright-cmd-Gs19S5zFML4da5fiUmsi8p/json?poll=1&since=40s"
 #define NTFY_STATUS_URL "https://ntfy.sh/kidbright-status-Gs19S5zFML4da5fiUmsi8p"
 // ntfy.sh (ฟรี ไม่ล็อกอิน) จำกัด ~1 คำขอ/5 วิ และ 250 ข้อความ/วัน ต่อ IP
-// รอบนี้ยาว 20 วิ = 1 GET + 1 POST ต่อรอบ ปลอดภัยกว่าเดิมมาก
-#define POLL_INTERVAL_MS 12000
+// รอบจริงกินเวลา ~6-7 วิ อยู่แล้ว (จาก delay 5.5 วิระหว่าง GET กับ POST)
+// ตั้ง 8 วิ ให้เหลือช่องว่างเล็กน้อยระหว่างรอบ แทนที่จะรัวติดกันจนชนโควตาอีก
+#define POLL_INTERVAL_MS 8000
 #define WIFI_RETRY_MS 5000
 
 #define LDR_PIN 36
@@ -81,20 +82,28 @@ void beginKnownWiFi() {
 // ให้เอามือถือ/คอมไปต่อแล้วเลือกเน็ตใหม่ผ่านหน้าเว็บที่เด้งขึ้นเอง (ไม่ต้องแก้โค้ด/อัปโหลดใหม่)
 void connectWiFiEasy() {
   WiFi.mode(WIFI_STA);
-  Serial.println("WiFi: trying known network " KNOWN_WIFI_SSID "...");
-  beginKnownWiFi();
-  unsigned long start = millis();
-  while (WiFi.status() != WL_CONNECTED && millis() - start < KNOWN_WIFI_TIMEOUT_MS) {
-    delay(200);
-  }
-  if (WiFi.status() == WL_CONNECTED) {
-    wasWifiConnected = true;
-    Serial.print("WiFi: connected to known network, IP=");
-    Serial.println(WiFi.localIP());
-    return;
+
+  // กด S1+S2 ค้างไว้ตอนเปิด/รีเซ็ตบอร์ด เพื่อข้ามเน็ตเดิมแล้วตั้งค่าเน็ตใหม่ทันที
+  // (เช่นตอนพรีเซนต์อยากสลับไปใช้ฮอตสปอตมือถือแทนเน็ตโรงเรียน)
+  bool skipKnown = (digitalRead(S1_PIN) == LOW && digitalRead(S2_PIN) == LOW);
+  if (skipKnown) {
+    Serial.println("WiFi: S1+S2 held at boot -> skipping known network, forcing setup hotspot");
+  } else {
+    Serial.println("WiFi: trying known network " KNOWN_WIFI_SSID "...");
+    beginKnownWiFi();
+    unsigned long start = millis();
+    while (WiFi.status() != WL_CONNECTED && millis() - start < KNOWN_WIFI_TIMEOUT_MS) {
+      delay(200);
+    }
+    if (WiFi.status() == WL_CONNECTED) {
+      wasWifiConnected = true;
+      Serial.print("WiFi: connected to known network, IP=");
+      Serial.println(WiFi.localIP());
+      return;
+    }
   }
 
-  Serial.println("WiFi: known network not found, opening setup hotspot " SETUP_AP_NAME "...");
+  Serial.println("WiFi: opening setup hotspot " SETUP_AP_NAME "...");
   WiFiManager wm;
   wm.setConfigPortalTimeout(SETUP_PORTAL_TIMEOUT_S);
   bool ok = wm.autoConnect(SETUP_AP_NAME);
