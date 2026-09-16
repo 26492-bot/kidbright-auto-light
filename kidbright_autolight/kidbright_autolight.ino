@@ -8,9 +8,16 @@
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
+#include <WiFiManager.h>
 
-#define WIFI_SSID "TNW-WIFI2"
-#define WIFI_PASS ""  // เน็ตเปิด ไม่มีรหัส
+// ลองต่อเน็ตที่รู้จักอยู่แล้วก่อน (เร็ว ไม่ต้องตั้งค่าอะไร)
+#define KNOWN_WIFI_SSID "TNW-WIFI2"
+#define KNOWN_WIFI_PASS ""  // เน็ตเปิด ไม่มีรหัส
+#define KNOWN_WIFI_TIMEOUT_MS 8000
+// ถ้าต่อเน็ตที่รู้จักไม่ได้ (ย้ายที่/เปลี่ยนเน็ต) บอร์ดจะเปิดเป็น WiFi ของตัวเอง
+// ชื่อนี้ ให้เอามือถือ/คอมไปต่อ แล้วหน้าเว็บตั้งค่าจะเด้งขึ้นมาเองให้เลือกเน็ตใหม่
+#define SETUP_AP_NAME "KidBright-Setup"
+#define SETUP_PORTAL_TIMEOUT_S 180
 // ntfy.sh: บริการ pub/sub ฟรี ไม่ต้องสมัคร ไม่ต้องยืนยันอีเมล
 #define NTFY_CMD_URL "https://ntfy.sh/kidbright-cmd-Gs19S5zFML4da5fiUmsi8p"
 #define NTFY_CMD_POLL_URL "https://ntfy.sh/kidbright-cmd-Gs19S5zFML4da5fiUmsi8p/json?poll=1&since=90s"
@@ -57,15 +64,46 @@ const char *modeStr() {
 
 // เน็ตเปิดไม่มีรหัส ต้องเรียก WiFi.begin(ssid) เฉยๆ ห้ามส่ง "" เป็นรหัสผ่าน
 // (บาง core ของ ESP32 จะพยายามยืนยันตัวตนแบบ WPA ด้วยรหัสว่างแล้วค้าง/รีเซ็ต)
-void beginWiFi() {
-  if (strlen(WIFI_PASS) == 0) {
-    WiFi.begin(WIFI_SSID);
+void beginKnownWiFi() {
+  if (strlen(KNOWN_WIFI_PASS) == 0) {
+    WiFi.begin(KNOWN_WIFI_SSID);
   } else {
-    WiFi.begin(WIFI_SSID, WIFI_PASS);
+    WiFi.begin(KNOWN_WIFI_SSID, KNOWN_WIFI_PASS);
   }
 }
 
-void connectWiFiNonBlocking() {
+// เรียกครั้งเดียวใน setup(): ลองเน็ตที่รู้จักก่อน ถ้าไม่เจอค่อยเปิดฮอตสปอตตั้งค่า
+// ให้เอามือถือ/คอมไปต่อแล้วเลือกเน็ตใหม่ผ่านหน้าเว็บที่เด้งขึ้นเอง (ไม่ต้องแก้โค้ด/อัปโหลดใหม่)
+void connectWiFiEasy() {
+  WiFi.mode(WIFI_STA);
+  Serial.println("WiFi: trying known network " KNOWN_WIFI_SSID "...");
+  beginKnownWiFi();
+  unsigned long start = millis();
+  while (WiFi.status() != WL_CONNECTED && millis() - start < KNOWN_WIFI_TIMEOUT_MS) {
+    delay(200);
+  }
+  if (WiFi.status() == WL_CONNECTED) {
+    wasWifiConnected = true;
+    Serial.print("WiFi: connected to known network, IP=");
+    Serial.println(WiFi.localIP());
+    return;
+  }
+
+  Serial.println("WiFi: known network not found, opening setup hotspot " SETUP_AP_NAME "...");
+  WiFiManager wm;
+  wm.setConfigPortalTimeout(SETUP_PORTAL_TIMEOUT_S);
+  bool ok = wm.autoConnect(SETUP_AP_NAME);
+  if (ok) {
+    wasWifiConnected = true;
+    Serial.print("WiFi: connected via setup hotspot, IP=");
+    Serial.println(WiFi.localIP());
+  } else {
+    Serial.println("WiFi: not configured, continuing offline (auto light + S1/S2 still work)");
+  }
+}
+
+// เรียกทุกลูป: ถ้าหลุดกลางคัน ลองต่อเน็ตที่รู้จักซ้ำเป็นระยะ (ไม่เปิดฮอตสปอตซ้ำระหว่างทำงาน)
+void maintainWiFi() {
   if (WiFi.status() == WL_CONNECTED) {
     if (!wasWifiConnected) {
       wasWifiConnected = true;
@@ -81,9 +119,8 @@ void connectWiFiNonBlocking() {
   unsigned long now = millis();
   if (now - lastWifiAttempt < WIFI_RETRY_MS) return;
   lastWifiAttempt = now;
-  Serial.println("WiFi: (re)connecting to " WIFI_SSID "...");
-  WiFi.mode(WIFI_STA);
-  beginWiFi();
+  Serial.println("WiFi: retrying known network...");
+  beginKnownWiFi();
 }
 
 // ดึง "message" ตัวล่าสุดจาก NDJSON ที่ ntfy.sh ส่งกลับมา (เอาบรรทัดสุดท้าย)
@@ -110,27 +147,35 @@ void syncWithWeb() {
   https.setConnectTimeout(5000);
   https.setTimeout(5000);
 
+  Serial.print("sync: GET cmd code=");
   if (https.begin(client, NTFY_CMD_POLL_URL)) {
     int code = https.GET();
+    Serial.print(code);
     if (code == 200) {
-      String cmd = extractLastMessage(https.getString());
+      String body = https.getString();
+      String cmd = extractLastMessage(body);
       cmd.trim();
+      Serial.print(" cmd=\"");
+      Serial.print(cmd);
+      Serial.print("\"");
       if (cmd == "on") mode = MODE_ON;
       else if (cmd == "off") mode = MODE_OFF;
       else if (cmd == "auto") mode = MODE_AUTO;
-    } else {
-      Serial.print("ntfy GET cmd failed, code=");
-      Serial.println(code);
     }
     https.end();
+  } else {
+    Serial.print("begin-failed");
   }
+  Serial.println();
 
   String status = String("{\"light\":") + lastLight +
                   ",\"lamp\":" + (lampOn ? "true" : "false") +
                   ",\"mode\":\"" + modeStr() + "\"}";
+  Serial.print("sync: POST status code=");
   if (https.begin(client, NTFY_STATUS_URL)) {
     https.addHeader("Content-Type", "text/plain");
     int code = https.POST(status);
+    Serial.println(code);
     if (code != 200) {
       Serial.print("ntfy POST status failed, code=");
       Serial.println(code);
@@ -199,14 +244,13 @@ void setup() {
   matrix.setRotation(1);
   matrix.clear();
   matrix.writeDisplay();
-  WiFi.mode(WIFI_STA);
-  beginWiFi();
+  connectWiFiEasy();
   Serial.println("KidBright auto light ready.");
 }
 
 void loop() {
   handleButtons();
-  connectWiFiNonBlocking();
+  maintainWiFi();
 
   uint8_t light = readLight();
   lastLight = light;

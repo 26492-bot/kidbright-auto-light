@@ -125,36 +125,6 @@
   .live-note{font-size:.8rem;color:var(--muted);}
   .live-note code{font-family:"IBM Plex Mono",monospace;background:var(--surface-2);padding:1px 5px;border-radius:4px;}
 
-  .matrix-shell{
-    background:var(--code-bg);
-    border-radius:14px;
-    padding:18px;
-    display:flex;
-    justify-content:center;
-  }
-  #matrix{display:block;}
-  .led{transition:fill .25s ease, opacity .25s ease;}
-
-  .controls{display:flex;flex-direction:column;gap:16px;}
-  .control{display:flex;flex-direction:column;gap:6px;}
-  .control-label{
-    display:flex;justify-content:space-between;font-size:.9rem;color:var(--muted);
-  }
-  .control-label b{color:var(--ink);font-variant-numeric:tabular-nums;}
-  input[type=range]{
-    -webkit-appearance:none;appearance:none;width:100%;height:6px;
-    border-radius:999px;background:var(--surface-2);outline:none;
-    border:1px solid var(--line);
-  }
-  input[type=range]::-webkit-slider-thumb{
-    -webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;
-    background:var(--accent);cursor:pointer;border:3px solid var(--surface);box-shadow:var(--shadow);
-  }
-  input[type=range]::-moz-range-thumb{
-    width:20px;height:20px;border-radius:50%;background:var(--accent);cursor:pointer;
-    border:3px solid var(--surface);box-shadow:var(--shadow);
-  }
-
   .mode-row{display:flex;flex-direction:column;gap:8px;}
   .mode-label{font-size:.9rem;color:var(--muted);}
   .mode-group{display:flex;gap:8px;flex-wrap:wrap;}
@@ -170,30 +140,6 @@
     background:color-mix(in srgb, var(--accent) 22%, var(--surface));
     border-color:var(--accent);color:var(--accent-strong);
   }
-  .mode-hint{font-size:.78rem;color:var(--muted);}
-
-  .history{
-    border-top:1px solid var(--line);
-    padding-top:18px;
-  }
-  .history-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;}
-  .history-head b{font-size:.9rem;}
-  .history-head span{font-size:.78rem;color:var(--muted);}
-  .history-log{
-    list-style:none;margin:0;padding:0;
-    display:flex;flex-direction:column;gap:0;
-    max-height:220px;overflow-y:auto;
-  }
-  .history-log li{
-    display:grid;grid-template-columns:56px 22px 1fr;gap:10px;align-items:center;
-    padding-block:8px;border-top:1px solid var(--line);font-size:.85rem;
-  }
-  .history-log li:first-child{border-top:none;}
-  .history-log time{font-family:"IBM Plex Mono",monospace;color:var(--muted);font-variant-numeric:tabular-nums;}
-  .history-log .dot{font-size:1rem;text-align:center;}
-  .history-log .desc{color:var(--ink);}
-  .history-log .empty{color:var(--muted);font-style:italic;grid-column:1/-1;padding-block:4px;}
-
   /* SECTIONS */
   section{margin-top:64px;}
   .section-head{margin-bottom:22px;}
@@ -288,55 +234,6 @@
   <p class="tagline">ใช้บอร์ด <strong>KidBright v1.3</strong> เพียงตัวเดียว ไม่ต่อสายเพิ่มแม้แต่เส้นเดียว —
     อ่านค่าความสว่างจากเซนเซอร์แสง (LDR) ที่ติดมากับบอร์ด แล้วสั่งจอ LED 16×8 บนบอร์ดทำหน้าที่แทน “หลอดไฟ”</p>
 
-  <div class="board" id="demo">
-    <div class="status-row">
-      <div class="pill" id="statusPill">☀️ กลางวัน — ไฟดับ</div>
-      <div class="threshold-note">ทดลองเลื่อนแถบด้านล่าง เพื่อจำลองค่าที่เซนเซอร์ LDR อ่านได้จริง</div>
-    </div>
-
-    <div class="matrix-shell">
-      <svg id="matrix" viewBox="0 0 168 88" width="336" height="176" aria-label="จำลองจอ LED 16 คูณ 8 บนบอร์ด KidBright"></svg>
-    </div>
-
-    <div class="controls">
-      <div class="control">
-        <div class="control-label">
-          <span>ระดับแสงที่วัดได้ (Light level sensor)</span>
-          <b><span id="lightVal">28</span>%</b>
-        </div>
-        <input type="range" id="lightSlider" min="0" max="100" value="28" aria-label="ระดับแสง เปอร์เซ็นต์">
-      </div>
-      <div class="control">
-        <div class="control-label">
-          <span>เกณฑ์ตัดสิน (threshold) — ต่ำกว่านี้ถือว่ามืด</span>
-          <b><span id="threshVal">35</span>%</b>
-        </div>
-        <input type="range" id="threshSlider" min="5" max="80" value="35" aria-label="ค่าเกณฑ์ threshold เปอร์เซ็นต์">
-      </div>
-    </div>
-
-    <div class="mode-row">
-      <div class="mode-label">โหมดควบคุม — เหมือนปุ่ม S1/S2 บนบอร์ด หรือสวิตช์ในแอป NETPIE Freeboard</div>
-      <div class="mode-group" role="group" aria-label="โหมดควบคุมไฟ">
-        <button type="button" class="mode-btn" data-mode="auto" aria-pressed="true">🔁 อัตโนมัติ</button>
-        <button type="button" class="mode-btn" data-mode="on" aria-pressed="false">💡 บังคับเปิด</button>
-        <button type="button" class="mode-btn" data-mode="off" aria-pressed="false">🌑 บังคับปิด</button>
-      </div>
-      <div class="mode-hint" id="modeHint">โหมดอัตโนมัติ: ใช้ค่าจากเซนเซอร์แสงเทียบกับเกณฑ์ด้านบน</div>
-    </div>
-
-    <div class="history">
-      <div class="history-head">
-        <b>ประวัติการเปิด–ปิดย้อนหลัง</b>
-        <span>จำลองจากการโต้ตอบบนหน้านี้</span>
-      </div>
-      <ul class="history-log" id="historyLog">
-        <li class="empty">ยังไม่มีการเปลี่ยนสถานะ ลองเลื่อนแถบหรือกดปุ่มโหมดด้านบน</li>
-      </ul>
-    </div>
-    <p class="live-note" style="margin:0;">การ์ดด้านบนคือ <strong>ตัวจำลอง</strong> ไว้ทำความเข้าใจลอจิก — ควบคุมบอร์ดจริงได้ที่การ์ดถัดไป</p>
-  </div>
-
   <div class="board" id="liveControl">
     <div class="status-row">
       <div class="pill offline" id="livePill"><span class="live-dot"></span> กำลังเชื่อมต่อบอร์ดจริง…</div>
@@ -350,7 +247,7 @@
     </div>
 
     <div class="mode-row">
-      <div class="mode-label">ควบคุมบอร์ดจริงจากที่นี่ — สั่งผ่านอินเทอร์เน็ต บอร์ดต้องเปิดเครื่องและต่อ WiFi <code class="mono">TNW-WIFI2</code> อยู่</div>
+      <div class="mode-label">ควบคุมบอร์ดจริงจากที่นี่ — สั่งผ่านอินเทอร์เน็ต บอร์ดต้องเปิดเครื่องและต่อ WiFi อยู่</div>
       <div class="mode-group" role="group" aria-label="ควบคุมบอร์ดจริง">
         <button type="button" class="mode-btn" data-live-mode="auto" aria-pressed="false">🔁 อัตโนมัติ</button>
         <button type="button" class="mode-btn" data-live-mode="on" aria-pressed="false">💡 เปิด</button>
@@ -363,7 +260,7 @@
   <section>
     <div class="section-head">
       <h2>หลักการทำงาน</h2>
-      <p>ลอจิกทั้งหมดวนซ้ำตลอดเวลาในบล็อก <span class="mono">Forever</span> ของ KidBright IDE สามขั้นตอนนี้เกิดขึ้นซ้ำทุกครึ่งวินาที</p>
+      <p>ลอจิกทั้งหมดวนซ้ำตลอดเวลาใน <span class="mono">loop()</span> ของโค้ด Arduino สามขั้นตอนนี้เกิดขึ้นซ้ำทุก 50 มิลลิวินาที</p>
     </div>
     <div class="flow">
       <div class="flow-step">
@@ -400,97 +297,75 @@
     <div class="spec-grid" style="margin-top:14px;">
       <div class="spec"><b>เซนเซอร์แสง</b><span>LDR (analog) · GPIO 36</span></div>
       <div class="spec"><b>ตัวแสดงผล "หลอดไฟ"</b><span>LED Matrix 8×8 ×2 = 16×8</span></div>
+      <div class="spec"><b>ปุ่มบังคับเปิด/ปิด</b><span>S1 = GPIO16 · S2 = GPIO14</span></div>
       <div class="spec"><b>บอร์ด</b><span>KidBright v1.3 (ESP32)</span></div>
-      <div class="spec"><b>พอร์ตที่ตรวจพบ</b><span>COM4 (USB Serial)</span></div>
     </div>
   </section>
 
   <section>
     <div class="section-head">
-      <h2>เขียนบล็อกใน KidBright IDE</h2>
-      <p>เปิดโปรแกรม KidBright IDE แล้วลากบล็อกต่อกันตามลำดับนี้ในแท็บ Block</p>
+      <h2>โค้ดที่ใช้งานจริงบนบอร์ด</h2>
+      <p>เขียนเป็น Arduino C++ อัปโหลดผ่าน Arduino IDE (arduino-cli) — ไม่ใช่บล็อกลาก-วาง</p>
     </div>
     <ol class="steps">
-      <li>
-        <div class="idx">1</div>
-        <div class="body"><b>เริ่มด้วยบล็อก Forever</b><span>จากหมวด Control — ทุกอย่างข้างในจะทำงานซ้ำตลอดเวลา</span></div>
-      </li>
-      <li>
-        <div class="idx">2</div>
-        <div class="body"><b>ใส่บล็อก if…else</b><span>จากหมวด Logic วางไว้ในบล็อก Forever</span></div>
-      </li>
-      <li>
-        <div class="idx">3</div>
-        <div class="body"><b>เงื่อนไข: Light level sensor &lt; 35</b><span>ลากบล็อก "Light level sensor" จากหมวด Sensor มาเทียบกับตัวเลข (ปรับค่า 35 ได้ตามความไวที่ต้องการ)</span></div>
-      </li>
-      <li>
-        <div class="idx">4</div>
-        <div class="body"><b>ฝั่ง "จริง": LED Matrix แสดงผล fill (จุดสว่างทั้งหมด)</b><span>จากหมวด Display — เปรียบเสมือนเปิดไฟ</span></div>
-      </li>
-      <li>
-        <div class="idx">5</div>
-        <div class="body"><b>ฝั่ง "เท็จ": LED Matrix clear (ดับทั้งหมด)</b><span>เปรียบเสมือนปิดไฟ</span></div>
-      </li>
-      <li>
-        <div class="idx">6</div>
-        <div class="body"><b>ปิดท้ายด้วย wait 0.5 วินาที</b><span>ในบล็อก Forever เพื่อไม่ให้เซนเซอร์อ่านค่าถี่เกินไป</span></div>
-      </li>
+      <li><div class="idx">1</div><div class="body"><b>วนซ้ำตลอดเวลาใน loop()</b><span>อ่านเซนเซอร์ + เช็คปุ่ม + ซิงก์เว็บ ทุก 50 มิลลิวินาที</span></div></li>
+      <li><div class="idx">2</div><div class="body"><b>เทียบค่าแสงกับเกณฑ์ (มี hysteresis กันกระพริบ)</b><span>มืดกว่า 55 → เปิด, สว่างกว่า 70 → ปิด</span></div></li>
+      <li><div class="idx">3</div><div class="body"><b>ฝั่ง "เปิด": matrix.fillScreen(LED_ON)</b><span>จุดจอ LED 16×8 ทั้งหมด</span></div></li>
+      <li><div class="idx">4</div><div class="body"><b>ฝั่ง "ปิด": matrix.clear()</b><span>ดับจอ LED ทั้งหมด</span></div></li>
+      <li><div class="idx">5</div><div class="body"><b>ปุ่ม S1/S2 หรือปุ่มบนเว็บบังคับโหมดได้ตลอด</b><span>ไม่สนใจค่าเซนเซอร์เมื่ออยู่โหมดเปิด/ปิดค้าง</span></div></li>
     </ol>
-    <p style="color:var(--muted);font-size:.9rem;margin-top:14px;">เท่านี้บอร์ดก็ทำงานอัตโนมัติได้แล้วโดยไม่ต้องต่อเน็ต — ถ้าต้องการเปิด/ปิดเองจากปุ่มบนบอร์ดหรือจากมือถือ พร้อมดูประวัติย้อนหลัง ให้ทำต่อในหัวข้อถัดไป</p>
+    <p style="color:var(--muted);font-size:.9rem;margin-top:14px;">คำสั่งอัปโหลดซ้ำ (ต้องมี Arduino IDE + ESP32 core ติดตั้งไว้):</p>
+    <pre class="mono">arduino-cli compile --fqbn esp32:esp32:esp32 kidbright_autolight
+arduino-cli upload -p COM4 --fqbn esp32:esp32:esp32 kidbright_autolight</pre>
   </section>
 
   <section>
     <div class="section-head">
-      <h2>เปิด–ปิดเอง และดูประวัติย้อนหลัง</h2>
-      <p>บอร์ด KidBright ใช้ชิป ESP32 ที่มี WiFi ในตัวอยู่แล้ว จึงเชื่อมกับแพลตฟอร์ม <strong>NETPIE</strong> (ฟรี ของ NECTEC หน่วยงานเดียวกับที่สร้าง KidBright) เพื่อบังคับเปิด–ปิดจากแอปและเก็บประวัติพร้อมเวลาได้ โดยไม่ต้องต่อสายเพิ่ม</p>
+      <h2>เชื่อม WiFi ง่ายๆ ไม่ต้องแก้โค้ด</h2>
+      <p>บอร์ดใช้ชิป ESP32 ที่มี WiFi ในตัว ลองต่อเน็ตที่รู้จักอยู่แล้วก่อนอัตโนมัติ ถ้าไม่เจอ (เช่นย้ายไปที่อื่น) จะเปิดฮอตสปอตของตัวเองให้ตั้งค่าเน็ตใหม่ได้ทันทีโดยไม่ต้องเขียนโค้ดหรืออัปโหลดซ้ำ</p>
     </div>
-
-    <div class="callout">
-      <div class="icon">🕹️</div>
+    <ol class="steps">
+      <li><div class="idx">1</div><div class="body"><b>เปิดบอร์ด</b><span>ลองต่อ WiFi <code class="mono">TNW-WIFI2</code> อัตโนมัติภายใน 8 วินาที</span></div></li>
+      <li><div class="idx">2</div><div class="body"><b>ถ้าต่อไม่ได้ บอร์ดจะปล่อยฮอตสปอตชื่อ "KidBright-Setup"</b><span>เอามือถือ/คอมไปเชื่อมต่อ WiFi นี้</span></div></li>
+      <li><div class="idx">3</div><div class="body"><b>หน้าตั้งค่าจะเด้งขึ้นเอง</b><span>เลือกชื่อ WiFi จริงที่ต้องการ ใส่รหัสผ่าน แล้วกดบันทึก</span></div></li>
+      <li><div class="idx">4</div><div class="body"><b>บอร์ดต่อเน็ตใหม่และจำไว้</b><span>ครั้งต่อไปจะต่อเน็ตนี้เองอัตโนมัติ ไม่ต้องตั้งซ้ำ</span></div></li>
+    </ol>
+    <div class="callout" style="margin-top:14px;">
+      <div class="icon">💡</div>
       <div>
-        <b>ควบคุมได้ 2 ทาง เท่ากัน</b>
-        <span>กดปุ่ม <span class="mono">S1</span> บนบอร์ด = บังคับเปิด, กดปุ่ม <span class="mono">S2</span> = บังคับปิด, กดค้างพร้อมกัน = กลับเป็นอัตโนมัติ — หรือสลับสวิตช์เดียวกันนี้จากแดชบอร์ด NETPIE Freeboard บนมือถือ/คอมพิวเตอร์เครื่องไหนก็ได้ สถานะจะซิงก์กันเสมอ</span>
+        <b>ไม่มี WiFi ก็ยังใช้ได้</b>
+        <span>ระบบไฟอัตโนมัติและปุ่ม S1/S2 บนบอร์ดทำงานได้เองเสมอ ไม่ต้องพึ่งอินเทอร์เน็ต — WiFi จำเป็นเฉพาะฟีเจอร์ควบคุม/ดูสถานะผ่านเว็บเท่านั้น</span>
       </div>
     </div>
-
-    <ol class="steps" style="margin-top:14px;">
-      <li><div class="idx">7</div><div class="body"><b>สมัครบัญชี NETPIE ฟรีที่ netpie.io</b><span>ทำเองในเบราว์เซอร์ (ต้องมีอีเมลของนักเรียน/ครูที่ปรึกษา)</span></div></li>
-      <li><div class="idx">8</div><div class="body"><b>สร้าง Device ใหม่แบบ Freeboard</b><span>คัดลอกค่า Device ID, Key, Secret ที่ระบบสร้างให้</span></div></li>
-      <li><div class="idx">9</div><div class="body"><b>ใน KidBright IDE เพิ่มบล็อก WiFi connect</b><span>ใส่ชื่อ/รหัส WiFi ของโรงเรียน จากหมวด Internet</span></div></li>
-      <li><div class="idx">10</div><div class="body"><b>เพิ่มบล็อก NETPIE connect</b><span>ใส่ Device ID / Key / Secret ที่คัดลอกไว้</span></div></li>
-      <li><div class="idx">11</div><div class="body"><b>เพิ่มตัวแปร mode (auto / on / off)</b><span>ปุ่ม S1/S2 และสวิตช์บน Freeboard แก้ตัวแปรนี้ร่วมกัน ส่วนบล็อก if เดิมเปลี่ยนเงื่อนไขเป็น "mode = auto และ Light level sensor &lt; 35" หรือ "mode = on"</span></div></li>
-      <li><div class="idx">12</div><div class="body"><b>เพิ่มบล็อก NETPIE publish</b><span>ส่งค่าความสว่างและสถานะไฟขึ้น Feed ทุกครั้งที่ค่าเปลี่ยน หรือทุก 1 นาที — NETPIE เก็บเป็นประวัติพร้อมเวลาให้อัตโนมัติ</span></div></li>
-      <li><div class="idx">13</div><div class="body"><b>ออกแบบหน้า Freeboard</b><span>ลากวิดเจ็ต Switch (เปิด–ปิด) และ Trend graph (กราฟย้อนหลัง) มาผูกกับ Feed ที่สร้างไว้</span></div></li>
-    </ol>
-
-    <div class="spec-grid" style="margin-top:14px;">
-      <div class="spec"><b>ควบคุมระยะไกล</b><span>NETPIE Freeboard · Switch widget</span></div>
-      <div class="spec"><b>ประวัติย้อนหลัง</b><span>NETPIE Feed · Trend graph พร้อมเวลา</span></div>
-      <div class="spec"><b>ควบคุมที่ตัวบอร์ด</b><span>ปุ่ม S1 (เปิด) / S2 (ปิด)</span></div>
-      <div class="spec"><b>การเชื่อมต่อ</b><span>WiFi ในตัว ESP32 · ไม่ต้องเพิ่มโมดูล</span></div>
-    </div>
   </section>
 
   <section>
     <div class="section-head">
-      <h2>อัปโหลดลงบอร์ด</h2>
-      <p>บอร์ดต่อผ่าน USB อยู่ที่พอร์ต <span class="mono">COM4</span> ในเครื่องนี้แล้ว</p>
+      <h2>เว็บคุยกับบอร์ดจริงได้อย่างไร</h2>
+      <p>บอร์ดกับเว็บอยู่คนละเครือข่ายกัน จึงผ่านตัวกลางฟรีไม่ต้องสมัครสมาชิก <a href="https://ntfy.sh" target="_blank" rel="noopener">ntfy.sh</a></p>
     </div>
     <ol class="steps">
-      <li><div class="idx">1</div><div class="body"><b>เปิด KidBright IDE</b><span>ดาวน์โหลดได้ฟรีจาก kid-bright.org หากยังไม่มีในเครื่อง</span></div></li>
-      <li><div class="idx">2</div><div class="body"><b>เลือกรุ่นบอร์ดเป็น KidBright v1.3</b><span>ในเมนูตั้งค่าบอร์ดมุมขวาบนของโปรแกรม</span></div></li>
-      <li><div class="idx">3</div><div class="body"><b>เลือกพอร์ต COM4</b><span>ระบบตรวจพบบอร์ดที่พอร์ตนี้อัตโนมัติ</span></div></li>
-      <li><div class="idx">4</div><div class="body"><b>กดปุ่ม Upload</b><span>รอจนแถบสถานะแจ้งว่าอัปโหลดสำเร็จ ไฟจะเริ่มทำงานทันทีโดยไม่ต้องต่อคอมพิวเตอร์อีก</span></div></li>
+      <li><div class="idx">1</div><div class="body"><b>กดปุ่มบนเว็บ</b><span>ส่งข้อความ <span class="mono">on</span> / <span class="mono">off</span> / <span class="mono">auto</span> ไปยัง topic คำสั่งเฉพาะของโปรเจกต์นี้</span></div></li>
+      <li><div class="idx">2</div><div class="body"><b>บอร์ด poll คำสั่งทุก 30 วินาที</b><span>แล้วตั้งโหมดตามคำสั่งล่าสุดที่ได้รับ</span></div></li>
+      <li><div class="idx">3</div><div class="body"><b>บอร์ดส่งสถานะกลับทุก 30 วินาที</b><span>ค่าความสว่าง สถานะไฟ และโหมดปัจจุบัน</span></div></li>
+      <li><div class="idx">4</div><div class="body"><b>เว็บ poll สถานะทุก 25 วินาที</b><span>มาแสดงในการ์ดด้านบน — คำสั่งถึงบอร์ดภายใน ~30 วินาที</span></div></li>
     </ol>
+    <div class="callout" style="margin-top:14px;">
+      <div class="icon">⚠️</div>
+      <div>
+        <b>บริการฟรีนี้จำกัดความถี่ค่อนข้างเข้ม</b>
+        <span>ถ้ากดปุ่มรัวๆ หรือมีคนใช้พร้อมกันหลายคนในเครือข่ายเดียวกัน อาจโดนจำกัดชั่วคราวจนคำสั่งไปไม่ถึง (ไม่มี error โชว์ให้เห็น) รอสัก 1-2 นาทีแล้วลองใหม่</span>
+      </div>
+    </div>
   </section>
 
   <section>
     <div class="section-head">
       <h2>ปรับความไวของเซนเซอร์</h2>
-      <p>ถ้าไฟติดเร็ว/ช้าเกินไปในสภาพแสงจริงของโรงเรียน ปรับได้ที่ตัวเลขเกณฑ์ในบล็อก if เพียงจุดเดียว</p>
+      <p>ถ้าไฟติดเร็ว/ช้าเกินไปในสภาพแสงจริงของโรงเรียน แก้ 2 ค่านี้ในไฟล์ <span class="mono">.ino</span> แล้วอัปโหลดใหม่</p>
     </div>
-    <pre class="mono">ถ้า Light level sensor &lt; <span style="color:var(--led-on)">35</span>   →  เพิ่มตัวเลข = ไฟติดง่ายขึ้น (ไวต่อแสงน้อย)
-                              →  ลดตัวเลข   = ไฟติดยากขึ้น (ต้องมืดกว่าเดิม)</pre>
+    <pre class="mono">DARK_ON_THRESHOLD  = <span style="color:var(--led-on)">55</span>   → มืดกว่านี้ไฟถึงจะติด (ค่ายิ่งสูง ไฟติดง่ายขึ้น)
+DARK_OFF_THRESHOLD = <span style="color:var(--led-on)">70</span>   → สว่างกว่านี้ไฟถึงจะดับ (ต้อง &gt; ค่า ON เสมอ กันไฟกระพริบ)</pre>
   </section>
 
   <footer>
@@ -502,119 +377,9 @@
 <script>
 (function(){
   "use strict";
-  var COLS = 16, ROWS = 8, CELL = 9, GAP = 1.5;
-  var svg = document.getElementById("matrix");
-  var leds = [];
-
-  for(var r=0;r<ROWS;r++){
-    for(var c=0;c<COLS;c++){
-      var rect = document.createElementNS("http://www.w3.org/2000/svg","rect");
-      rect.setAttribute("x", c*(CELL+GAP)+2);
-      rect.setAttribute("y", r*(CELL+GAP)+2);
-      rect.setAttribute("width", CELL);
-      rect.setAttribute("height", CELL);
-      rect.setAttribute("rx", 1.6);
-      rect.setAttribute("class","led");
-      rect.setAttribute("fill","var(--led-off)");
-      svg.appendChild(rect);
-      leds.push(rect);
-    }
-  }
-  svg.setAttribute("viewBox","0 0 "+(COLS*(CELL+GAP)+4)+" "+(ROWS*(CELL+GAP)+4));
-
-  var lightSlider = document.getElementById("lightSlider");
-  var threshSlider = document.getElementById("threshSlider");
-  var lightVal = document.getElementById("lightVal");
-  var threshVal = document.getElementById("threshVal");
-  var pill = document.getElementById("statusPill");
-  var modeButtons = Array.prototype.slice.call(document.querySelectorAll(".mode-btn"));
-  var modeHint = document.getElementById("modeHint");
-  var historyLog = document.getElementById("historyLog");
-
-  var mode = "auto";
-  var lastIsDark = null;
-  var MAX_LOG = 8;
-
-  var MODE_HINTS = {
-    auto: "โหมดอัตโนมัติ: ใช้ค่าจากเซนเซอร์แสงเทียบกับเกณฑ์ด้านบน",
-    on: "บังคับเปิด: ไฟติดค้างไม่ว่าค่าแสงจะเป็นเท่าไร (เหมือนกดปุ่ม S1 หรือสวิตช์ใน Freeboard)",
-    off: "บังคับปิด: ไฟดับค้างไม่ว่าค่าแสงจะเป็นเท่าไร (เหมือนกดปุ่ม S2 หรือสวิตช์ใน Freeboard)"
-  };
-
-  function timeNow(){
-    return new Date().toLocaleTimeString("th-TH", {hour:"2-digit", minute:"2-digit", second:"2-digit"});
-  }
-
-  function logEvent(isDark, reason){
-    var empty = historyLog.querySelector(".empty");
-    if(empty) empty.remove();
-
-    var li = document.createElement("li");
-    var time = document.createElement("time");
-    time.textContent = timeNow();
-    var dot = document.createElement("span");
-    dot.className = "dot";
-    dot.textContent = isDark ? "💡" : "⚫";
-    var desc = document.createElement("span");
-    desc.className = "desc";
-    desc.textContent = (isDark ? "ไฟติด" : "ไฟดับ") + " — " + reason;
-
-    li.appendChild(time);
-    li.appendChild(dot);
-    li.appendChild(desc);
-    historyLog.insertBefore(li, historyLog.firstChild);
-
-    while(historyLog.children.length > MAX_LOG){
-      historyLog.removeChild(historyLog.lastChild);
-    }
-  }
-
-  function render(logReason){
-    var light = Number(lightSlider.value);
-    var thresh = Number(threshSlider.value);
-    lightVal.textContent = light;
-    threshVal.textContent = thresh;
-
-    var isDark;
-    if(mode === "on") isDark = true;
-    else if(mode === "off") isDark = false;
-    else isDark = light < thresh;
-
-    leds.forEach(function(led){
-      led.setAttribute("fill", isDark ? "var(--led-on)" : "var(--led-off)");
-    });
-
-    if(isDark){
-      pill.classList.add("on");
-      pill.textContent = "🌙 กลางคืน — ไฟติด";
-    } else {
-      pill.classList.remove("on");
-      pill.textContent = "☀️ กลางวัน — ไฟดับ";
-    }
-
-    if(lastIsDark !== null && isDark !== lastIsDark){
-      logEvent(isDark, logReason || (mode === "auto" ? "แสงเทียบกับเกณฑ์เปลี่ยน" : "เปลี่ยนโหมดควบคุม"));
-    }
-    lastIsDark = isDark;
-  }
-
-  lightSlider.addEventListener("input", function(){ render(); });
-  threshSlider.addEventListener("input", function(){ render(); });
-
-  modeButtons.forEach(function(btn){
-    btn.addEventListener("click", function(){
-      mode = btn.dataset.mode;
-      modeButtons.forEach(function(b){ b.setAttribute("aria-pressed", b === btn ? "true" : "false"); });
-      modeHint.textContent = MODE_HINTS[mode];
-      render(mode === "auto" ? "กลับเป็นโหมดอัตโนมัติ" : (mode === "on" ? "กดบังคับเปิด" : "กดบังคับปิด"));
-    });
-  });
-
-  render();
-
   document.getElementById("year").textContent = new Date().getFullYear() + 543;
 
-  // --- ควบคุมบอร์ดจริง (kvdb.io relay) ---
+  // --- ควบคุมบอร์ดจริง ---
   var NTFY_CMD_TOPIC = "kidbright-cmd-Gs19S5zFML4da5fiUmsi8p";
   var NTFY_STATUS_TOPIC = "kidbright-status-Gs19S5zFML4da5fiUmsi8p";
   var NTFY_BASE = "https://ntfy.sh/";
