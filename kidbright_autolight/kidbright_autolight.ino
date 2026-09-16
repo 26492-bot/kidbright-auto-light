@@ -20,11 +20,11 @@
 #define SETUP_PORTAL_TIMEOUT_S 180
 // ntfy.sh: บริการ pub/sub ฟรี ไม่ต้องสมัคร ไม่ต้องยืนยันอีเมล
 #define NTFY_CMD_URL "https://ntfy.sh/kidbright-cmd-Gs19S5zFML4da5fiUmsi8p"
-#define NTFY_CMD_POLL_URL "https://ntfy.sh/kidbright-cmd-Gs19S5zFML4da5fiUmsi8p/json?poll=1&since=90s"
+#define NTFY_CMD_POLL_URL "https://ntfy.sh/kidbright-cmd-Gs19S5zFML4da5fiUmsi8p/json?poll=1&since=40s"
 #define NTFY_STATUS_URL "https://ntfy.sh/kidbright-status-Gs19S5zFML4da5fiUmsi8p"
 // ntfy.sh (ฟรี ไม่ล็อกอิน) จำกัด ~1 คำขอ/5 วิ และ 250 ข้อความ/วัน ต่อ IP
 // รอบนี้ยาว 20 วิ = 1 GET + 1 POST ต่อรอบ ปลอดภัยกว่าเดิมมาก
-#define POLL_INTERVAL_MS 30000
+#define POLL_INTERVAL_MS 12000
 #define WIFI_RETRY_MS 5000
 
 #define LDR_PIN 36
