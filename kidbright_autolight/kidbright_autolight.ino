@@ -32,8 +32,6 @@
 #define LDR_PIN 36
 #define S1_PIN 16
 #define S2_PIN 14
-// หลอด LED จริงต่อภายนอก: OUT1 -> ตัวต้านทาน -> ขาบวก LED, ขาลบ LED -> GND
-#define LAMP_OUT_PIN 26
 // วัดจริงจากบอร์ดนี้: ห้องปกติ raw ~430-510, บังมือมืดสนิท raw ~590-745
 // (ค่า raw "ยิ่งมาก = ยิ่งมืด" สำหรับ LDR ตัวนี้)
 #define LDR_BRIGHT_RAW 400
@@ -222,7 +220,6 @@ void setLamp(bool on) {
     lampOnSinceMs = 0;
   }
   lampOn = on;
-  digitalWrite(LAMP_OUT_PIN, on ? HIGH : LOW);
   if (on) {
     matrix.fillScreen(LED_ON);
   } else {
@@ -280,8 +277,6 @@ void setup() {
   pinMode(LDR_PIN, INPUT);
   pinMode(S1_PIN, INPUT_PULLUP);
   pinMode(S2_PIN, INPUT_PULLUP);
-  pinMode(LAMP_OUT_PIN, OUTPUT);
-  digitalWrite(LAMP_OUT_PIN, LOW);
   matrix.begin(0x70);
   matrix.setRotation(1);
   matrix.clear();
