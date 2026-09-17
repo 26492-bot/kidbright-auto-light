@@ -21,12 +21,12 @@
 #define SETUP_PORTAL_TIMEOUT_S 180
 // ntfy.sh: บริการ pub/sub ฟรี ไม่ต้องสมัคร ไม่ต้องยืนยันอีเมล
 #define NTFY_CMD_URL "https://ntfy.sh/kidbright-cmd-Gs19S5zFML4da5fiUmsi8p"
-#define NTFY_CMD_POLL_URL "https://ntfy.sh/kidbright-cmd-Gs19S5zFML4da5fiUmsi8p/json?poll=1&since=40s"
+#define NTFY_CMD_POLL_URL "https://ntfy.sh/kidbright-cmd-Gs19S5zFML4da5fiUmsi8p/json?poll=1&since=60s"
 #define NTFY_STATUS_URL "https://ntfy.sh/kidbright-status-Gs19S5zFML4da5fiUmsi8p"
 // ntfy.sh (ฟรี ไม่ล็อกอิน) จำกัด ~1 คำขอ/5 วิ และ 250 ข้อความ/วัน ต่อ IP
-// รอบจริงกินเวลา ~6-7 วิ อยู่แล้ว (จาก delay 5.5 วิระหว่าง GET กับ POST)
-// ตั้ง 8 วิ ให้เหลือช่องว่างเล็กน้อยระหว่างรอบ แทนที่จะรัวติดกันจนชนโควตาอีก
-#define POLL_INTERVAL_MS 8000
+// โดนจำกัดซ้ำหลายรอบจากการใช้งานสะสมทั้งวัน (เปิดเว็บทิ้งไว้ + อัปโหลดโค้ดหลายรอบ)
+// ยืดรอบให้ห่างขึ้นอีกเพื่อความเสถียรตอนพรีเซนต์ แลกกับความเร็วที่ลดลงบ้าง
+#define POLL_INTERVAL_MS 20000
 #define WIFI_RETRY_MS 5000
 
 #define LDR_PIN 36
@@ -37,8 +37,8 @@
 #define LDR_BRIGHT_RAW 400
 #define LDR_DARK_RAW 760
 // ต้อง ON < OFF เสมอ (ค่าน้อย=มืด) ไม่งั้นไฟจะกระพริบตอนแสงแกว่งอยู่กลางๆ
-#define DARK_ON_THRESHOLD 55   // มืดกว่านี้ -> เปิดไฟ
-#define DARK_OFF_THRESHOLD 70  // สว่างกว่านี้ -> ปิดไฟ (เว้นช่วงกันไฟกระพริบ)
+#define DARK_ON_THRESHOLD 70   // มืดกว่านี้ -> เปิดไฟ
+#define DARK_OFF_THRESHOLD 75  // สว่างกว่านี้ -> ปิดไฟ (เว้นช่วงกันไฟกระพริบ)
 #define MIN_TOGGLE_INTERVAL_MS 2000
 #define SMOOTH_ALPHA 0.15
 #define BOTH_HOLD_MS 800

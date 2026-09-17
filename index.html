@@ -266,7 +266,7 @@
         <button type="button" class="mode-btn" data-live-mode="on" aria-pressed="false">💡 เปิด</button>
         <button type="button" class="mode-btn" data-live-mode="off" aria-pressed="false">🌑 ปิด</button>
       </div>
-      <div class="live-note">คำสั่งจะไปถึงบอร์ดภายใน ~8 วินาที</div>
+      <div class="live-note">คำสั่งจะไปถึงบอร์ดภายใน ~20 วินาที</div>
     </div>
   </div>
 
@@ -387,9 +387,9 @@ arduino-cli upload -p COM4 --fqbn esp32:esp32:esp32 kidbright_autolight</pre>
     </div>
     <ol class="steps">
       <li><div class="idx">1</div><div class="body"><b>กดปุ่มบนเว็บ</b><span>ส่งข้อความ <span class="mono">on</span> / <span class="mono">off</span> / <span class="mono">auto</span> ไปยัง topic คำสั่งเฉพาะของโปรเจกต์นี้</span></div></li>
-      <li><div class="idx">2</div><div class="body"><b>บอร์ด poll คำสั่งทุก 8 วินาที</b><span>แล้วตั้งโหมดตามคำสั่งล่าสุดที่ได้รับ</span></div></li>
-      <li><div class="idx">3</div><div class="body"><b>บอร์ดส่งสถานะกลับทุก 8 วินาที</b><span>ค่าความสว่าง สถานะไฟ และโหมดปัจจุบัน</span></div></li>
-      <li><div class="idx">4</div><div class="body"><b>เว็บ poll สถานะทุก 10 วินาที</b><span>มาแสดงในการ์ดด้านบน — คำสั่งถึงบอร์ดภายใน ~8 วินาที</span></div></li>
+      <li><div class="idx">2</div><div class="body"><b>บอร์ด poll คำสั่งทุก 20 วินาที</b><span>แล้วตั้งโหมดตามคำสั่งล่าสุดที่ได้รับ</span></div></li>
+      <li><div class="idx">3</div><div class="body"><b>บอร์ดส่งสถานะกลับทุก 20 วินาที</b><span>ค่าความสว่าง สถานะไฟ และโหมดปัจจุบัน</span></div></li>
+      <li><div class="idx">4</div><div class="body"><b>เว็บ poll สถานะทุก 15 วินาที</b><span>มาแสดงในการ์ดด้านบน — คำสั่งถึงบอร์ดภายใน ~20 วินาที</span></div></li>
     </ol>
     <div class="callout" style="margin-top:14px;">
       <div class="icon">⚠️</div>
@@ -431,7 +431,7 @@ DARK_OFF_THRESHOLD = <span style="color:var(--led-on)">70</span>   → สว่
   var liveMode = document.getElementById("liveMode");
   var liveButtons = Array.prototype.slice.call(document.querySelectorAll("[data-live-mode]"));
   var lastStatusAt = 0;
-  var STALE_MS = 40000;
+  var STALE_MS = 70000;
 
   var MODE_TH = { auto: "อัตโนมัติ", on: "บังคับเปิด", off: "บังคับปิด" };
 
@@ -549,7 +549,7 @@ DARK_OFF_THRESHOLD = <span style="color:var(--led-on)">70</span>   → สว่
 
   async function pollLiveStatus() {
     try {
-      var res = await fetch(NTFY_BASE + NTFY_STATUS_TOPIC + "/json?poll=1&since=30s", { cache: "no-store" });
+      var res = await fetch(NTFY_BASE + NTFY_STATUS_TOPIC + "/json?poll=1&since=60s", { cache: "no-store" });
       if (!res.ok) throw new Error("not ok");
       var text = await res.text();
       var msg = lastNdjsonMessage(text);
@@ -572,7 +572,7 @@ DARK_OFF_THRESHOLD = <span style="color:var(--led-on)">70</span>   → สว่
   });
 
   setInterval(updateConnectionUI, 1000);
-  setInterval(pollLiveStatus, 10000);
+  setInterval(pollLiveStatus, 15000);
   pollLiveStatus();
 })();
 </script>
