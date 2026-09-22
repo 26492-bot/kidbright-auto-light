@@ -439,8 +439,24 @@ DARK_OFF_THRESHOLD = <span style="color:var(--led-on)">70</span>   → สว่
     liveLight.textContent = (typeof data.light === "number") ? data.light + "%" : "—";
     liveLamp.textContent = data.lamp ? "💡 ติด" : "⚫ ดับ";
     liveMode.textContent = MODE_TH[data.mode] || data.mode || "—";
+    syncModeButtons(data.mode);
     updateOnTime(data.onSec);
     trackHistory(data.lamp);
+  }
+
+  // ปุ่มโหมดบนเว็บไฮไลต์ตามโหมดจริงของบอร์ด (ไม่ว่าจะเปลี่ยนจากปุ่มบนบอร์ด โมดูลปุ่ม หรือเว็บ)
+  // หลังกดปุ่มบนเว็บ ให้คงไฮไลต์ที่กดไว้ก่อน (สูงสุด 40 วิ) จนกว่าบอร์ดจะรับคำสั่งและรายงานกลับมา
+  var pendingMode = null, pendingUntil = 0;
+  function syncModeButtons(actual) {
+    var show = actual;
+    if (pendingMode && Date.now() < pendingUntil && actual !== pendingMode) {
+      show = pendingMode;
+    } else {
+      pendingMode = null;
+    }
+    liveButtons.forEach(function (b) {
+      b.setAttribute("aria-pressed", b.dataset.liveMode === show ? "true" : "false");
+    });
   }
 
   // --- เวลาใช้งานสะสม + ประวัติ ---
@@ -567,6 +583,8 @@ DARK_OFF_THRESHOLD = <span style="color:var(--led-on)">70</span>   → สว่
   liveButtons.forEach(function (btn) {
     btn.addEventListener("click", function () {
       liveButtons.forEach(function (b) { b.setAttribute("aria-pressed", b === btn ? "true" : "false"); });
+      pendingMode = btn.dataset.liveMode;
+      pendingUntil = Date.now() + 40000;
       fetch(NTFY_BASE + NTFY_CMD_TOPIC, { method: "POST", body: btn.dataset.liveMode }).catch(function () {});
     });
   });

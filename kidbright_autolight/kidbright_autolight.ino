@@ -32,12 +32,19 @@
 #define LDR_PIN 36
 #define S1_PIN 16
 #define S2_PIN 14
+// โมดูลปุ่มกด 3 ปุ่มต่อนอกบอร์ด: K1->IN1, K2->IN2, K3->IN3, VCC->3V3 (ห้ามใช้ 5V), GND->GND
+// แดง K1 = บังคับปิด, เหลือง K2 = อัตโนมัติ, เขียว K3 = บังคับเปิด
+// ระดับสัญญาณตอนบูตจะถูกจำเป็นสถานะ "ไม่ได้กด" ให้เอง (โมดูลกดแล้วเป็น HIGH หรือ LOW ก็ใช้ได้)
+// จึงห้ามกดปุ่มค้างไว้ตอนเปิด/รีเซ็ตบอร์ด
+#define EXT_K1_PIN 32
+#define EXT_K2_PIN 33
+#define EXT_K3_PIN 34
 // วัดจริงจากบอร์ดนี้: ห้องปกติ raw ~430-510, บังมือมืดสนิท raw ~590-745
 // (ค่า raw "ยิ่งมาก = ยิ่งมืด" สำหรับ LDR ตัวนี้)
 #define LDR_BRIGHT_RAW 400
 #define LDR_DARK_RAW 760
 // ต้อง ON < OFF เสมอ (ค่าน้อย=มืด) ไม่งั้นไฟจะกระพริบตอนแสงแกว่งอยู่กลางๆ
-#define DARK_ON_THRESHOLD 70   // มืดกว่านี้ -> เปิดไฟ
+#define DARK_ON_THRESHOLD 65   // มืดกว่านี้ -> เปิดไฟ
 #define DARK_OFF_THRESHOLD 75  // สว่างกว่านี้ -> ปิดไฟ (เว้นช่วงกันไฟกระพริบ)
 #define MIN_TOGGLE_INTERVAL_MS 2000
 #define SMOOTH_ALPHA 0.15
@@ -52,6 +59,12 @@ Mode mode = MODE_AUTO;
 bool lastS1 = HIGH, lastS2 = HIGH;
 unsigned long s1DebounceAt = 0, s2DebounceAt = 0;
 unsigned long bothHeldSince = 0;
+String lastCmdId = "";
+bool statusDirty = false;
+Mode modeReported = MODE_AUTO;
+const uint8_t extPins[3] = {EXT_K1_PIN, EXT_K2_PIN, EXT_K3_PIN};
+bool extIdle[3], extLast[3];
+unsigned long extDebounceAt[3] = {0, 0, 0};
 bool lampOn = false;
 unsigned long lastToggleAt = 0;
 float smoothedRaw = -1;
@@ -147,12 +160,25 @@ String extractLastMessage(const String &body) {
   return body.substring(start, end);
 }
 
+// ดึง "id" ของข้อความล่าสุด ไว้ใช้คำสั่งจากเว็บแต่ละอันแค่ครั้งเดียว
+String extractLastId(const String &body) {
+  int idx = body.lastIndexOf("\"id\":\"");
+  if (idx < 0) return "";
+  int start = idx + 6;  // ความยาวของ "id":"
+  int end = body.indexOf('"', start);
+  if (end < 0) return "";
+  return body.substring(start, end);
+}
+
 // ดึงคำสั่งจากเว็บ (auto/on/off) แล้วส่งสถานะปัจจุบันกลับไปให้เว็บอ่าน ผ่าน ntfy.sh
 void syncWithWeb() {
   if (WiFi.status() != WL_CONNECTED) return;
   unsigned long now = millis();
-  if (now - lastPollAt < POLL_INTERVAL_MS) return;
+  // ปกติซิงก์ทุก POLL_INTERVAL_MS แต่ถ้าโหมดเพิ่งเปลี่ยน (กดปุ่มบนบอร์ด/โมดูล) ให้ซิงก์เร็วขึ้น (ห่างจากรอบก่อนอย่างน้อย 8 วิ)
+  bool earlySync = statusDirty && (now - lastPollAt >= 8000);
+  if (now - lastPollAt < POLL_INTERVAL_MS && !earlySync) return;
   lastPollAt = now;
+  statusDirty = false;
 
   WiFiClientSecure client;
   client.setInsecure();
@@ -168,13 +194,18 @@ void syncWithWeb() {
     if (code == 200) {
       String body = https.getString();
       String cmd = extractLastMessage(body);
+      String cmdId = extractLastId(body);
       cmd.trim();
       Serial.print(" cmd=\"");
       Serial.print(cmd);
       Serial.print("\"");
-      if (cmd == "on") mode = MODE_ON;
-      else if (cmd == "off") mode = MODE_OFF;
-      else if (cmd == "auto") mode = MODE_AUTO;
+      // ใช้คำสั่งเว็บแต่ละอันแค่ครั้งเดียว ไม่งั้นคำสั่งเก่า (ยังอยู่ในช่วง 60 วิ) จะทับปุ่มที่เพิ่งกดบนบอร์ด
+      if (cmdId.length() > 0 && cmdId != lastCmdId) {
+        lastCmdId = cmdId;
+        if (cmd == "on") mode = MODE_ON;
+        else if (cmd == "off") mode = MODE_OFF;
+        else if (cmd == "auto") mode = MODE_AUTO;
+      }
     }
     https.end();
   } else {
@@ -186,6 +217,7 @@ void syncWithWeb() {
   // เพราะ ntfy.sh เติมโควตาให้แค่ ~1 คำขอ/5 วินาที
   delay(5500);
 
+  modeReported = mode;
   String status = String("{\"light\":") + lastLight +
                   ",\"lamp\":" + (lampOn ? "true" : "false") +
                   ",\"mode\":\"" + modeStr() +
@@ -267,6 +299,23 @@ void handleButtons() {
   lastS2 = s2;
 }
 
+// โมดูลปุ่ม 3 ปุ่มนอกบอร์ด: เขียว = บังคับเปิด, เหลือง = อัตโนมัติ, แดง = บังคับปิด
+void handleExtButtons() {
+  unsigned long now = millis();
+  for (int i = 0; i < 3; i++) {
+    bool level = digitalRead(extPins[i]);
+    if (level != extLast[i] && now - extDebounceAt[i] > DEBOUNCE_MS) {
+      extDebounceAt[i] = now;
+      extLast[i] = level;
+      if (level != extIdle[i]) {  // เพิ่งกด
+        if (i == 0) { mode = MODE_OFF;  Serial.println("MODE -> OFF (external K1 red)"); }
+        if (i == 1) { mode = MODE_AUTO; Serial.println("MODE -> AUTO (external K2 yellow)"); }
+        if (i == 2) { mode = MODE_ON;   Serial.println("MODE -> ON (external K3 green)"); }
+      }
+    }
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   prefs.begin("kidbright", false);
@@ -277,6 +326,13 @@ void setup() {
   pinMode(LDR_PIN, INPUT);
   pinMode(S1_PIN, INPUT_PULLUP);
   pinMode(S2_PIN, INPUT_PULLUP);
+  for (int i = 0; i < 3; i++) {
+    // GPIO34/35 ไม่มี pull-up ในตัว (พึ่งตัวต้านทานบนโมดูลแทน)
+    pinMode(extPins[i], extPins[i] >= 34 ? INPUT : INPUT_PULLUP);
+    delay(5);
+    extIdle[i] = extLast[i] = digitalRead(extPins[i]);
+  }
+  Serial.printf("External keys idle level: K1=%d K2=%d K3=%d\n", extIdle[0], extIdle[1], extIdle[2]);
   matrix.begin(0x70);
   matrix.setRotation(1);
   matrix.clear();
@@ -287,6 +343,8 @@ void setup() {
 
 void loop() {
   handleButtons();
+  handleExtButtons();
+  if (mode != modeReported) statusDirty = true;
   maintainWiFi();
 
   uint8_t light = readLight();
